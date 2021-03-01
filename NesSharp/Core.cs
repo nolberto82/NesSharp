@@ -16,10 +16,6 @@ namespace NesSharp
 		public Controls control;
 		public Tracer tracer;
 
-		private uint mFrame;
-		private uint mFps;
-		private Clock mClock = new Clock();
-
 		public void Run()
 		{
 			using (RenderWindow window = new RenderWindow(new VideoMode(256, 240), "Nes Sharp"))
@@ -32,15 +28,6 @@ namespace NesSharp
 
 				while (window.IsOpen)
 				{
-					if (mClock.ElapsedTime.AsSeconds() >= 1f)
-					{
-						mFps = mFrame;
-						mFrame = 0;
-						mClock.Restart();
-					}
-
-					++mFrame;
-
 					//window.Clear();
 					window.DispatchEvents();
 
@@ -63,7 +50,7 @@ namespace NesSharp
 		public void Initialize(RenderWindow window)
 		{
 			ppu = new Ppu(this, window);
-			cpu = new Cpu(this, "roms/smb.nes");
+			cpu = new Cpu(this, "roms/nestest.nes");
 			control = new Controls();
 			tracer = new Tracer(this);
 		}

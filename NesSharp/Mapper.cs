@@ -33,7 +33,7 @@ namespace NesSharp
             SetUpMapper();
         }
 
-		public byte CpuRead(int addr, bool tracer = false)
+		public byte CpuRead(int addr)
 		{
 			switch (addr)
 			{
@@ -50,16 +50,8 @@ namespace NesSharp
 			return ram[addr];
 		}
 
-		public u8 CpuReadDebug(int addr, bool isaddr = false)
+		public u8 CpuReadDebug(int addr)
 		{
-			switch (addr)
-			{
-				case 0x2002:
-					break;
-				default:
-					break;
-			}
-
 			return ram[addr];
 		}
 

@@ -327,7 +327,7 @@ namespace NesSharp
                     b1 = c.mapper.CpuReadDebug(pc + 1);
                     b2 = c.mapper.CpuReadDebug(pc + 2);
                     addr = (b2 << 8) | b1;
-                    v = c.mapper.CpuReadDebug(addr, true);
+                    v = c.mapper.CpuReadDebug(addr);
                     str3 = $"{op:X2} {b1:X2} {b2:X2}";
 
                     if (op != 0x4c && op != 0x20)
@@ -345,7 +345,7 @@ namespace NesSharp
                     b1 = c.mapper.CpuReadDebug(pc + 1);
                     b2 = c.mapper.CpuReadDebug(pc + 2);
                     addr = ((b2 << 8) | b1) + x;
-                    v = c.mapper.CpuReadDebug(addr, true);
+                    v = c.mapper.CpuReadDebug(addr);
                     str3 = $"{op:X2} {b1:X2} {b2:X2}";
                     str1 = $"{pc:X4}  {str3}  {opnames[op][0]} ${addr - x:X4},X @ {addr:X4} = {v:X2} {tab,8}";
                     str2 = $"A:{a:X2} X:{x:X2} Y:{y:X2} P:{ps:X2} SP:{sp:X2}";
@@ -355,7 +355,7 @@ namespace NesSharp
                     b2 = c.mapper.CpuReadDebug(pc + 2);
                     b0 = ((b2 << 8) | b1);
                     addr = (((b2 << 8) | b1) + y) & 0xffff;
-                    v = c.mapper.CpuReadDebug(addr, true);
+                    v = c.mapper.CpuReadDebug(addr);
                     str3 = $"{op:X2} {b1:X2} {b2:X2}";
                     str1 = $"{pc:X4}  {str3}  {opnames[op][0]} ${b0:X4},Y @ {addr:X4} = {v:X2} {tab,8}";
                     str2 = $"A:{a:X2} X:{x:X2} Y:{y:X2} P:{ps:X2} SP:{sp:X2}";

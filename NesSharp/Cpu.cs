@@ -93,11 +93,6 @@ namespace NesSharp
         {
             while (ppucycles < 341)
             {
-                if (pc == 0x908e)
-                {
-                    int yu = 0;
-                }
-
                 SetProcessorStatus();
 
                 op = c.mapper.CpuRead(pc++);
@@ -729,7 +724,7 @@ namespace NesSharp
             int r = a + ~v + (fc ? 1 : 0);
             SetZero(r);
             SetNegative(r);
-            fv = ((a ^ v) & (a ^ r) & 0x80) > 0 ? true : false;
+            fv = ((a ^ v) & (a ^ r) & 0x80) > 0;
             fc = (r & 0xff00) == 0;
             a = (byte)r;
         }
@@ -740,7 +735,7 @@ namespace NesSharp
             int r = a + ~v + (fc ? 1 : 0);
             SetZero(r);
             SetNegative(r);
-            fv = ((a ^ v) & (a ^ r) & 0x80) > 0 ? true : false;
+            fv = ((a ^ v) & (a ^ r) & 0x80) > 0;
             fc = (r & 0xff00) == 0;
             a = (byte)r;
         }
@@ -751,7 +746,7 @@ namespace NesSharp
             int r = a + v + (fc ? 1 : 0);
             SetZero(r);
             SetNegative(r);
-            fv = (~(a ^ v) & (a ^ r) & 0x80) > 0 ? true : false;
+            fv = (~(a ^ v) & (a ^ r) & 0x80) > 0;
             fc = r > 255;
             a = (byte)r;
         }
@@ -762,7 +757,7 @@ namespace NesSharp
             int r = a + v + (fc ? 1 : 0);
             SetZero(r);
             SetNegative(r);
-            fv = (~(a ^ v) & (a ^ r) & 0x80) > 0 ? true : false;
+            fv = (~(a ^ v) & (a ^ r) & 0x80) > 0;
             fc = r > 255;
             a = (byte)r;
         }
@@ -783,18 +778,18 @@ namespace NesSharp
 
         private void UpdateFlags()
         {
-            fc = (ps & 0x01) > 0 ? true : false;
-            fz = (ps & 0x02) > 0 ? true : false;
-            fi = (ps & 0x04) > 0 ? true : false;
-            fd = (ps & 0x08) > 0 ? true : false;
+            fc = (ps & 0x01) > 0;
+            fz = (ps & 0x02) > 0;
+            fi = (ps & 0x04) > 0;
+            fd = (ps & 0x08) > 0;
             //fb = (ps & 0x10) > 0 ? true : false;
-            fv = (ps & 0x40) > 0 ? true : false;
-            fn = (ps & 0x80) > 0 ? true : false;
+            fv = (ps & 0x40) > 0;
+            fn = (ps & 0x80) > 0;
         }
 
         private void SetProcessorStatus()
         {
-            int t = 0;
+            int t;
             t = fc ? 0x01 : 0x00;
             t |= fz ? 0x02 : 0x00;
             t |= fi ? 0x04 : 0x00;
@@ -808,28 +803,28 @@ namespace NesSharp
 
         private void DEY()
         {
-            y = (byte)(y - 1);
+            y--;
             SetZero(y);
             SetNegative(y);
         }
 
         private void DEX()
         {
-            x = (byte)(x - 1);
+            x--;
             SetZero(x);
             SetNegative(x);
         }
 
         private void INY()
         {
-            y = (byte)(y + 1);
+            y++;
             SetZero(y);
             SetNegative(y);
         }
 
         private void INX()
         {
-            x = (byte)(x + 1);
+            x++;
             SetZero(x);
             SetNegative(x);
         }
@@ -864,8 +859,7 @@ namespace NesSharp
 
         private void ROL()
         {
-            bool bit7 = false;
-            bit7 = (a & (1 << 7)) > 0 ? true : false;
+            bool bit7 = (a & (1 << 7)) > 0;
             a <<= 1 & 0xff;
             if (fc)
                 a |= (1 << 0);
@@ -876,9 +870,8 @@ namespace NesSharp
 
         private void ROLM(int v)
         {
-            bool bit7 = false;
             int r = c.mapper.CpuRead(v);
-            bit7 = (r & (1 << 7)) > 0 ? true : false;
+            bool bit7 = (r & (1 << 7)) > 0;
             r <<= 1;
             if (fc)
                 r |= (1 << 0);
@@ -890,7 +883,7 @@ namespace NesSharp
 
         private void ASL()
         {
-            fc = (a & (1 << 7)) > 0 ? true : false;
+            fc = (a & (1 << 7)) > 0;
             a = (byte)((a << 1) & 0xfe);
             SetZero(a);
             SetNegative(a);
@@ -899,8 +892,8 @@ namespace NesSharp
         private void ASLM(int v)
         {
             int r = c.mapper.CpuRead(v);
-            fc = (r & (1 << 7)) > 0 ? true : false;
-            r = (byte)((r << 1) & 0xfe);
+            fc = (r & (1 << 7)) > 0;
+            r = (r << 1) & 0xfe;
             c.mapper.CpuWrite(v, (byte)r);
             SetZero(r);
             SetNegative(r);
@@ -908,8 +901,7 @@ namespace NesSharp
 
         private void ROR()
         {
-            bool bit0 = false;
-            bit0 = (a & (1 << 0)) > 0 ? true : false;
+            bool bit0 = (a & (1 << 0)) > 0;
             a >>= 1 & 0xff;
             if (fc)
                 a |= (1 << 7);
@@ -920,9 +912,8 @@ namespace NesSharp
 
         private void RORM(int v)
         {
-            bool bit0 = false;
             int r = c.mapper.CpuRead(v);
-            bit0 = (r & (1 << 0)) > 0 ? true : false;
+            bool bit0 = (r & (1 << 0)) > 0;
             r >>= 1;
             if (fc)
                 r |= (1 << 7);
@@ -934,7 +925,7 @@ namespace NesSharp
 
         private void LSR()
         {
-            fc = (a & (1 << 0)) > 0 ? true : false;
+            fc = (a & (1 << 0)) > 0;
             a = (byte)((a >> 1) & 0x7f);
             SetZero(a);
             SetNegative(a);
@@ -943,7 +934,7 @@ namespace NesSharp
         private void LSRM(int v)
         {
             int r = c.mapper.CpuRead(v);
-            fc = (a & (1 << 0)) > 0 ? true : false;
+            fc = (a & (1 << 0)) > 0;
             r = (byte)((r >> 1) & 0x7f);
             c.mapper.CpuWrite(v, (byte)r);
             SetZero(r);
@@ -990,7 +981,7 @@ namespace NesSharp
             int b1 = c.mapper.CpuRead(pc);
             int b2 = c.mapper.CpuRead(pc + 1);
             int b3 = (b1 | b2 << 8) + x;
-            pagecrossed = (b3 & 0xff00) != b2 << 8 ? true : false;
+            pagecrossed = (b3 & 0xff00) != b2 << 8;
             return b3 & 0xffff;
         }
 
@@ -999,7 +990,7 @@ namespace NesSharp
             int b1 = c.mapper.CpuRead(pc);
             int b2 = c.mapper.CpuRead(pc + 1);
             int b3 = (b1 | b2 << 8) + y;
-            pagecrossed = (b3 & 0xff00) != b2 << 8 ? true : false;
+            pagecrossed = (b3 & 0xff00) != b2 << 8;
             return b3 & 0xffff;
         }
 
@@ -1014,7 +1005,7 @@ namespace NesSharp
             int b1 = c.mapper.CpuRead(pc);
             int b2 = c.mapper.CpuRead((byte)(b1 + 1));
             int b3 = (c.mapper.CpuRead(b1) | b2 << 8) + y;
-            pagecrossed = (b3 & 0xff00) != b2 << 8 ? true : false;
+            pagecrossed = (b3 & 0xff00) != b2 << 8;
             return b3 & 0xffff;
         }
 
