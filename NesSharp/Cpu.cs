@@ -1,5 +1,7 @@
 using System;
 using System.Text;
+using u8 = System.Byte;
+using s8 = System.SByte;
 
 namespace NesSharp
 {
@@ -7,11 +9,11 @@ namespace NesSharp
     {
         Core c;
 
-        private byte a;
-        private byte y;
-        private byte x;
-        private byte ps;
-        private byte sp;
+        private u8 a;
+        private u8 y;
+        private u8 x;
+        private u8 ps;
+        private u8 sp;
         private int pc;
 
         private bool fc;
@@ -25,7 +27,7 @@ namespace NesSharp
 
         private bool trace;
 
-        private byte op;
+        private u8 op;
 
         private bool pagecrossed;
 
@@ -76,17 +78,6 @@ namespace NesSharp
             running = true;
             //ppucycles = cycles * 3;
             //trace = true;
-        }
-
-        public void Run()
-        {
-            while (true)
-            {
-                if (!running)
-                {
-
-                }
-            }
         }
 
         public void Execute()
@@ -344,9 +335,9 @@ namespace NesSharp
         public void NMI()
         {
             //pc++;
-            c.mapper.CpuWrite(sp | 0x100, (byte)(pc >> 8));
+            c.mapper.CpuWrite(sp | 0x100, (u8)(pc >> 8));
             sp--;
-            c.mapper.CpuWrite(sp | 0x100, (byte)pc);
+            c.mapper.CpuWrite(sp | 0x100, (u8)pc);
             sp--;
             c.mapper.CpuWrite(sp | 0x100, ps);
             sp--;
@@ -378,9 +369,9 @@ namespace NesSharp
         private void JSR(int v)
         {
             pc++;
-            c.mapper.CpuWrite(sp | 0x100, (byte)(pc >> 8));
+            c.mapper.CpuWrite(sp | 0x100, (u8)(pc >> 8));
             sp--;
-            c.mapper.CpuWrite(sp | 0x100, (byte)pc);
+            c.mapper.CpuWrite(sp | 0x100, (u8)pc);
             sp--;
             pc = v;
         }
@@ -407,7 +398,7 @@ namespace NesSharp
             sp++;
             ps = c.mapper.CpuRead(sp | 0x100);
             UpdateFlags();
-            //ps = (byte)(ps & 0xef);
+            //ps = (u8)(ps & 0xef);
         }
 
         private void PLA()
@@ -420,7 +411,7 @@ namespace NesSharp
 
         private void PHP()
         {
-            c.mapper.CpuWrite(sp | 0x100, (byte)(ps | 0x30));
+            c.mapper.CpuWrite(sp | 0x100, (u8)(ps | 0x30));
             sp--;
             UpdateFlags();
         }
@@ -554,7 +545,7 @@ namespace NesSharp
         private void BIT(int v)
         {
             int b = c.mapper.CpuRead(v);
-            int t = (byte)(a & b);
+            int t = (u8)(a & b);
             SetZero(t);
             SetNegative(b);
             SetOverflow(b);
@@ -577,7 +568,7 @@ namespace NesSharp
         private void DEC(int v)
         {
             int b = c.mapper.CpuRead(v) - 1;
-            c.mapper.CpuWrite(v, (byte)b);
+            c.mapper.CpuWrite(v, (u8)b);
             SetZero(b);
             SetNegative(b);
         }
@@ -585,7 +576,7 @@ namespace NesSharp
         private void INC(int v)
         {
             int b = c.mapper.CpuRead(v) + 1;
-            c.mapper.CpuWrite(v, (byte)b);
+            c.mapper.CpuWrite(v, (u8)b);
             SetZero(b);
             SetNegative(b);
         }
@@ -692,28 +683,28 @@ namespace NesSharp
 
         private void EOR()
         {
-            a = (byte)(a ^ c.mapper.CpuRead(pc));
+            a = (u8)(a ^ c.mapper.CpuRead(pc));
             SetZero(a);
             SetNegative(a);
         }
 
         private void EORM(int v)
         {
-            a = (byte)(a ^ c.mapper.CpuRead(v));
+            a = (u8)(a ^ c.mapper.CpuRead(v));
             SetZero(a);
             SetNegative(a);
         }
 
         private void ORA()
         {
-            a = (byte)(a | c.mapper.CpuRead(pc));
+            a = (u8)(a | c.mapper.CpuRead(pc));
             SetZero(a);
             SetNegative(a);
         }
 
         private void ORAM(int v)
         {
-            a = (byte)(a | c.mapper.CpuRead(v));
+            a = (u8)(a | c.mapper.CpuRead(v));
             SetZero(a);
             SetNegative(a);
         }
@@ -726,7 +717,7 @@ namespace NesSharp
             SetNegative(r);
             fv = ((a ^ v) & (a ^ r) & 0x80) > 0;
             fc = (r & 0xff00) == 0;
-            a = (byte)r;
+            a = (u8)r;
         }
 
         private void SBCM(int v)
@@ -737,7 +728,7 @@ namespace NesSharp
             SetNegative(r);
             fv = ((a ^ v) & (a ^ r) & 0x80) > 0;
             fc = (r & 0xff00) == 0;
-            a = (byte)r;
+            a = (u8)r;
         }
 
         private void ADC()
@@ -748,7 +739,7 @@ namespace NesSharp
             SetNegative(r);
             fv = (~(a ^ v) & (a ^ r) & 0x80) > 0;
             fc = r > 255;
-            a = (byte)r;
+            a = (u8)r;
         }
 
         private void ADCM(int v)
@@ -759,7 +750,7 @@ namespace NesSharp
             SetNegative(r);
             fv = (~(a ^ v) & (a ^ r) & 0x80) > 0;
             fc = r > 255;
-            a = (byte)r;
+            a = (u8)r;
         }
 
         private void LDA()
@@ -789,16 +780,16 @@ namespace NesSharp
 
         private void SetProcessorStatus()
         {
-            int t;
-            t = fc ? 0x01 : 0x00;
-            t |= fz ? 0x02 : 0x00;
-            t |= fi ? 0x04 : 0x00;
-            t |= fd ? 0x08 : 0x00;
-            t |= fb ? 0x10 : 0x00;
-            t |= fv ? 0x40 : 0x00;
-            t |= fn ? 0x80 : 0x00;
+            int t = 0;
+            if (fc) t |= 0x01;
+            if (fz) t |= 0x02;
+            if (fi) t |= 0x04;
+            if (fd) t |= 0x08;
+            if (fb) t |= 0x10;
+            if (fv) t |= 0x40;
+            if (fv) t |= 0x80;
 
-            ps = (byte)(t | 0x20);
+            ps = (u8)(t | 0x20);
         }
 
         private void DEY()
@@ -876,7 +867,7 @@ namespace NesSharp
             if (fc)
                 r |= (1 << 0);
             fc = bit7;
-            c.mapper.CpuWrite(v, (byte)r);
+            c.mapper.CpuWrite(v, (u8)r);
             SetZero(r);
             SetNegative(r);
         }
@@ -884,7 +875,7 @@ namespace NesSharp
         private void ASL()
         {
             fc = (a & (1 << 7)) > 0;
-            a = (byte)((a << 1) & 0xfe);
+            a = (u8)((a << 1) & 0xfe);
             SetZero(a);
             SetNegative(a);
         }
@@ -894,7 +885,7 @@ namespace NesSharp
             int r = c.mapper.CpuRead(v);
             fc = (r & (1 << 7)) > 0;
             r = (r << 1) & 0xfe;
-            c.mapper.CpuWrite(v, (byte)r);
+            c.mapper.CpuWrite(v, (u8)r);
             SetZero(r);
             SetNegative(r);
         }
@@ -918,7 +909,7 @@ namespace NesSharp
             if (fc)
                 r |= (1 << 7);
             fc = bit0;
-            c.mapper.CpuWrite(v, (byte)r);
+            c.mapper.CpuWrite(v, (u8)r);
             SetZero(r);
             SetNegative(r);
         }
@@ -926,7 +917,7 @@ namespace NesSharp
         private void LSR()
         {
             fc = (a & (1 << 0)) > 0;
-            a = (byte)((a >> 1) & 0x7f);
+            a = (u8)((a >> 1) & 0x7f);
             SetZero(a);
             SetNegative(a);
         }
@@ -935,51 +926,51 @@ namespace NesSharp
         {
             int r = c.mapper.CpuRead(v);
             fc = (a & (1 << 0)) > 0;
-            r = (byte)((r >> 1) & 0x7f);
-            c.mapper.CpuWrite(v, (byte)r);
+            r = (u8)((r >> 1) & 0x7f);
+            c.mapper.CpuWrite(v, (u8)r);
             SetZero(r);
             SetNegative(r);
         }
 
         private void SetZero(int v)
         {
-            fz = (byte)v == 0;
+            fz = (u8)v == 0;
         }
 
         private void SetNegative(int v)
         {
-            fn = ((byte)(v >> 7) & 1) > 0;
+            fn = ((u8)(v >> 7) & 1) > 0;
         }
 
         private void SetOverflow(int v)
         {
-            fv = ((byte)(v >> 6) & 1) > 0;
+            fv = ((u8)(v >> 6) & 1) > 0;
         }
 
         private int GetZERP()
         {
-            return c.mapper.CpuRead(pc);
+            return c.mapper.ram[pc];
         }
 
         private int GetZERX()
         {
-            return (byte)(c.mapper.CpuRead(pc) + x);
+            return (u8)(c.mapper.ram[pc] + x);
         }
 
         private int GetZERY()
         {
-            return (byte)(c.mapper.CpuRead(pc) + y);
+            return (u8)(c.mapper.ram[pc] + y);
         }
 
         private int GetABSO()
         {
-            return c.mapper.CpuRead(pc + 1) << 8 | c.mapper.CpuRead(pc);
+            return c.mapper.ram[pc + 1] << 8 | c.mapper.ram[pc];
         }
 
         private int GetABSX()
         {
-            int b1 = c.mapper.CpuRead(pc);
-            int b2 = c.mapper.CpuRead(pc + 1);
+            int b1 = c.mapper.ram[pc];
+            int b2 = c.mapper.ram[pc + 1];
             int b3 = (b1 | b2 << 8) + x;
             pagecrossed = (b3 & 0xff00) != b2 << 8;
             return b3 & 0xffff;
@@ -987,8 +978,8 @@ namespace NesSharp
 
         private int GetABSY()
         {
-            int b1 = c.mapper.CpuRead(pc);
-            int b2 = c.mapper.CpuRead(pc + 1);
+            int b1 = c.mapper.ram[pc];
+            int b2 = c.mapper.ram[pc + 1];
             int b3 = (b1 | b2 << 8) + y;
             pagecrossed = (b3 & 0xff00) != b2 << 8;
             return b3 & 0xffff;
@@ -996,15 +987,15 @@ namespace NesSharp
 
         private int GetINDX()
         {
-            int b1 = (byte)(c.mapper.CpuRead(pc) + x);
-            return c.mapper.CpuRead(b1) | c.mapper.CpuRead((byte)(b1 + 1)) << 8;
+            int b1 = (u8)(c.mapper.ram[pc] + x);
+            return c.mapper.ram[b1] | c.mapper.ram[(u8)(b1 + 1)] << 8;
         }
 
         private int GetINDY()
         {
-            int b1 = c.mapper.CpuRead(pc);
-            int b2 = c.mapper.CpuRead((byte)(b1 + 1));
-            int b3 = (c.mapper.CpuRead(b1) | b2 << 8) + y;
+            int b1 = c.mapper.ram[pc];
+            int b2 = c.mapper.ram[(u8)(b1 + 1)];
+            int b3 = (c.mapper.ram[b1] | b2 << 8) + y;
             pagecrossed = (b3 & 0xff00) != b2 << 8;
             return b3 & 0xffff;
         }
@@ -1015,18 +1006,18 @@ namespace NesSharp
 
             if ((addr & 0xff) == 0xff)
             {
-                return ++addr;
+                return c.mapper.ram[addr] | (c.mapper.ram[addr & 0xff00]) << 8;
             }
             else
             {
-                return c.mapper.CpuRead(addr + 1) << 8 | c.mapper.CpuRead(addr);
+                return c.mapper.ram[addr + 1] << 8 | c.mapper.CpuRead(addr);
             }
         }
 
         private int GetRELA()
         {
             int b1 = c.mapper.CpuRead(pc);
-            return pc + (sbyte)(b1) + 1; ;
+            return pc + (s8)(b1) + 1; ;
         }
 
         public string GetFlags()

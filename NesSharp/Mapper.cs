@@ -108,41 +108,44 @@ namespace NesSharp
 			vram[addr & 0x3fff] = v;
 		}
 
-		void SetUpMapper()
+		private void SetUpMapper()
 		{
-            int prgbanks = rom[4];
-            int chrbanks = rom[5];
-            int prgrom = prgbanks * 0x4000;
-            int chrrom = chrbanks * 0x2000;
-            int mappernum = rom[8] & 0x0f;
-            c.ppu.mirrornametable = 0;
+			int prgbanks = rom[4];
+			int chrbanks = rom[5];
+			int prgrom = prgbanks * 0x4000;
+			int chrrom = chrbanks * 0x2000;
+			int prgsize = prgrom / prgbanks;
+			int chrsize = chrrom > 0 ? chrrom / chrbanks : 0;
+			int mappernum = rom[8] & 0x0f;
+			c.ppu.mirrornametable = 0;
 
-            if ((rom[6] & 0x08) > 0)
-            {
-                c.ppu.mirrornametable = 2;
-            }
-            else if ((rom[6] & 0x01) > 0)
-            {
-                c.ppu.mirrornametable = 1;
-            }
+			if ((rom[6] & 0x08) > 0)
+			{
+				c.ppu.mirrornametable = 2;
+			}
+			else if ((rom[6] & 0x01) > 0)
+			{
+				c.ppu.mirrornametable = 1;
+			}
 
-            switch (mappernum)
-            {
-                case 0:
-                    if (prgbanks == 1)
-                    {
-                        Array.Copy(rom, 0x10, ram, 0xC000, prgrom);
-                        Array.Copy(ram, 0xC000, ram, 0x8000, prgrom);
-                        Array.Copy(rom, 0x10 + prgrom, vram, 0, chrrom);
-                    }
-                    else
-                    {
-                        Array.Copy(rom, 0x10, ram, 0x8000, prgrom / 2);
-                        Array.Copy(rom, 0x10 + prgrom / 2, ram, 0xC000, prgrom / 2);
-                        Array.Copy(rom, 0x10 + prgrom, vram, 0, chrrom);
-                    }
-                    break;
-            }
-        }
-    }
+			switch (mappernum)
+			{
+				case 0:
+					if (prgbanks == 1)
+					{
+						Array.Copy(rom, 0x10, ram, 0xC000, prgrom);
+						Array.Copy(ram, 0xC000, ram, 0x8000, prgrom);
+						Array.Copy(rom, 0x10 + prgrom, vram, 0, chrrom);
+					}
+					else
+					{
+						Array.Copy(rom, 0x10, ram, 0x8000, prgsize);
+						Array.Copy(rom, 0x10 + prgsize, ram, 0xC000, prgsize);
+						if (chrsize > 0)
+							Array.Copy(rom, 0x10 + prgrom, vram, 0, chrrom);
+					}
+					break;
+			}
+		}
+	}
 }

@@ -1,4 +1,5 @@
 ﻿using SFML.Graphics;
+using SFML.System;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -48,6 +49,8 @@ namespace NesSharp
 		private bool spritesrender;
 		private bool vramaddrincrease;
 		private RenderWindow window;
+		public ulong frame;
+		private VertexArray vgfx;
 
 		public Ppu(Core core, RenderWindow w)
 		{
@@ -65,6 +68,7 @@ namespace NesSharp
 			emuimg = new Image(256, 240);
 			emutex = new Texture(emuimg);
 			emusprite = new Sprite();
+			vgfx = new VertexArray(PrimitiveType.Quads, 256 * 240);
 
 			if (palettes == null)
 			{
@@ -155,13 +159,13 @@ namespace NesSharp
 			else
 				ppu_v++;
 		}
+
 		public void DrawFrame()
 		{
 			emutex.Update(gfxdata);
 			emusprite.Texture = emutex;
 			window.Draw(emusprite);
 			window.Display();
-			//File.WriteAllBytes("gfxdata.bin",gfxdata);
 		}
 
 		public void MaskWrite(u8 val) //0x2001
@@ -223,7 +227,7 @@ namespace NesSharp
 					SetVBlank();
 					SetNMI();
 					SetSpriteZero();
-					DrawFrame();
+					//DrawFrame();
 					ppu_cyc++;
 				}
 			}
@@ -233,14 +237,18 @@ namespace NesSharp
 				{
 					ClearVBlank();
 					ClearSpriteZero();
-					ppu_cyc = 0;
+					ppu_cyc = 2;
 				}
 			}
 			else if (ppu_scanline == 262)
 			{
+				if (ppu_cyc == 2)
+					DrawFrame();
+
 				ppu_cyc = 0;
 				ppu_scanline = -1;
 				ppunmi = false;
+				frame++;		
 			}
 
 			ppu_scanline++;
@@ -327,8 +335,8 @@ namespace NesSharp
 					{
 						for (int r = 0; r < 8; r++)
 						{
-							int byte1 = c.mapper.PpuRead(patternaddr + (tileid * 16) + r + 0);
-							int byte2 = c.mapper.PpuRead(patternaddr + (tileid * 16) + r + 8);
+							int byte1 = c.mapper.vram[patternaddr + (tileid * 16) + r + 0];
+							int byte2 = c.mapper.vram[patternaddr + (tileid * 16) + r + 8];
 
 							for (int cl = 0; cl < 8; cl++)
 							{
@@ -358,7 +366,7 @@ namespace NesSharp
 		private void RenderBackground()
 		{
 			int patternaddr = (ppuctrl & 0x10) > 0 ? 0x1000 : 0x0000;
-			int paladdr = (ppuctrl & 0x10) > 0 ? 0x3f00 : 0x3f10;
+			int paladdr = 0x3f00;
 			int left8 = (ppuctrl & 0x02) > 0 ? 1 : 0;
 			int y = (ppu_scanline / 8);// +scroll_y;
 
@@ -386,18 +394,8 @@ namespace NesSharp
 					natx = 64;
 				}
 
-				if (ppuctrl == 0x89)
-				{
-					int yu = 0;
-				}
-
 				if ((ppuctrl & 1) > 0)
 					addr ^= 0x400;
-
-				if (addr == 0x2040)
-				{
-					int yy = 0;
-				}
 
 				int offx = x * 8 - sx;
 				int offy = y * 8;
@@ -415,15 +413,19 @@ namespace NesSharp
 
 				for (int row = 0; row < 8; row++)
 				{
+					int yp = offy + row;
+					if (yp < 0 || yp >= 240)
+						continue;
+
 					byte byte1 = c.mapper.vram[patternaddr + tileid * 16 + row + 0];
 					byte byte2 = c.mapper.vram[patternaddr + tileid * 16 + row + 8];
 
 					for (int col = 0; col < 8; col++)
 					{
 						int xp = offx + (7 - col);
-						int yp = offy + row;
+						
 
-						if (xp < 0 || xp >= 256 || yp < 0 || yp >= 240)
+						if (xp < 0 || xp >= 256)
 							continue;
 
 						int bit0 = (byte1 & 1) > 0 ? 1 : 0;
@@ -433,8 +435,7 @@ namespace NesSharp
 						byte2 >>= 1;
 
 						int colorindex = bit2 * 4 + (bit0 | bit1 * 2);
-
-						int color = palettes[c.mapper.PpuRead(paladdr | colorindex)];
+						int color = palettes[c.mapper.vram[paladdr | colorindex]];
 						gfxdata[(yp * 256 * 4) + (xp * 4) + 0] = (byte)(color >> 0);
 						gfxdata[(yp * 256 * 4) + (xp * 4) + 1] = (byte)(color >> 8);
 						gfxdata[(yp * 256 * 4) + (xp * 4) + 2] = (byte)(color >> 16);
@@ -451,7 +452,7 @@ namespace NesSharp
 			int oamaddr = 0x0100 * ppuoamdma;
 			int nametableaddr = 0x2000 | ppuctrl & 3 * 0x400;
 			int patternaddr = (ppuctrl & 0x08) > 0 ? 0x1000 : 0x0000;
-			int paladdr = (ppuctrl & 0x10) > 0 ? 0x3f10 : 0x3f00;
+			int paladdr = 0x3f10;
 			int left8 = (ppuctrl & 0x04) > 0 ? 1 : 0;
 
 			int y, tileid, att, x, i;
@@ -460,7 +461,7 @@ namespace NesSharp
 			{
 				i = j % 64;
 
-				if (ppuoamdma == 0)
+				if (ppuoamdma == 0 && oammem.Count == 256)
 				{
 					y = oammem[i * 4 + 0] + 1 & 0xff;
 					tileid = oammem[i * 4 + 1];

@@ -21,6 +21,7 @@ namespace NesSharp
 			using (RenderWindow window = new RenderWindow(new VideoMode(256, 240), "Nes Sharp"))
 			{
 				window.Closed += (s, e) => window.Close();
+				window.Size = new Vector2u(512, 448);
 
 				Initialize(window);
 
@@ -33,7 +34,7 @@ namespace NesSharp
 
 					cpu.Execute();
 
-					//window.SetTitle(mFps.ToString());
+
 					//Console.WriteLine(mFps);
 				}
 			}
@@ -50,7 +51,7 @@ namespace NesSharp
 		public void Initialize(RenderWindow window)
 		{
 			ppu = new Ppu(this, window);
-			cpu = new Cpu(this, "roms/nestest.nes");
+			cpu = new Cpu(this, "roms/nestress.nes");
 			control = new Controls();
 			tracer = new Tracer(this);
 		}
