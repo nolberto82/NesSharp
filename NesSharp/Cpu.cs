@@ -9,7 +9,7 @@ namespace NesSharp
 {
 	public class Cpu
 	{
-		Core c;
+		Main c;
 
 		private u8 a;
 		private u8 y;
@@ -38,7 +38,7 @@ namespace NesSharp
 
 		public string opname;
 
-		public Dictionary<int, bool> breakpoints;
+		public List<Breakpoint> breakpoints;
 
 		public int cycles;
 		public int ppucycles;
@@ -76,32 +76,38 @@ namespace NesSharp
 		public u8 Sp { get => sp; set => sp = value; }
 		public int Pc { get => pc; set => pc = value; }
 		public bool Breakmode { get => breakmode; set => breakmode = value; }
+		public bool Fc { get => fc; set => fc = value; }
+		public bool Fz { get => fz; set => fz = value; }
+		public bool Fi { get => fi; set => fi = value; }
+		public bool Fd { get => fd; set => fd = value; }
+		public bool Fb { get => fb; set => fb = value; }
+		public bool Fu { get => fu; set => fu = value; }
+		public bool Fv { get => fv; set => fv = value; }
+		public bool Fn { get => fn; set => fn = value; }
 
-		public Cpu(Core core, string gamename)
+		public Cpu(Main core)
 		{
 			c = core;
-			c.mapper = new Mapper(c, gamename);
-			if (c.mapper.ram == null)
-				return;
-			Pc = (c.mapper.CpuRead(0xfffd) << 8) | c.mapper.CpuRead(0xfffc);
 
-			if (gamename == "Content/instr/nestest.nes")
-			{
-				//pc = 0xc000;
-			}
-
-			Sp = 0xfd;
-			Ps = 0x24;
-			fi = true;
-			cycles = 0;
-			totalcycles = 0;
-			running = true;
-			breakpoints = new Dictionary<int, bool>();
-			for (int i = 0; i < 0x10000; i++)
-				breakpoints[i] = false;
+			breakpoints = new List<Breakpoint>();
 
 			//ppucycles = cycles * 3;
 			//trace = true;
+		}
+
+		public bool LoadRom(string gamename)
+		{
+			c.mapper = new Mapper(c, gamename);
+			if (c.mapper.ram == null)
+				return false;
+			Pc = (c.mapper.CpuRead(0xfffd) << 8) | c.mapper.CpuRead(0xfffc);
+
+			Sp = 0xfd;
+			Ps = 0x24;
+			Fi = true;
+			cycles = 0;
+			totalcycles = 0;
+			return running = true;
 		}
 
 		public void StepOne()
@@ -113,15 +119,14 @@ namespace NesSharp
 		{
 			while (ppucycles < SCANCYCLES)
 			{
-				bool bp = false;
-				breakpoints.TryGetValue(pc, out bp);
-				if (bp)
+				Execute();
+
+				var res = breakpoints.FirstOrDefault(b => b.Offset == Pc);
+				if (res != null && res.IsBP)
 				{
 					Breakmode = true;
 					return;
 				}
-
-				Execute();
 			}
 
 			ppucycles -= SCANCYCLES;
@@ -129,13 +134,12 @@ namespace NesSharp
 
 		private void Execute()
 		{
-			SetProcessorStatus();
-
-			op = c.mapper.CpuRead(Pc++);
+			op = c.mapper.ram[Pc++];
 
 			if (trace)
 			{
 				int opsize;
+				SetProcessorStatus();
 				c.tracer.DisassembleFCEUXFormat(op, Pc - 1, A, X, Y, Ps, Sp, out opsize, totalcycles);
 			}
 
@@ -157,13 +161,13 @@ namespace NesSharp
 				case 0xca: { DEX(); } break;
 				case 0x88: { DEY(); } break;
 
-				case 0x38: { fc = true; } break;
-				case 0x18: { fc = false; } break;
-				case 0xf8: { fd = true; } break;
-				case 0xd8: { fd = false; } break;
-				case 0x78: { fi = true; } break;
-				case 0x58: { fi = false; } break;
-				case 0xb8: { fv = false; } break;
+				case 0x38: { Fc = true; } break;
+				case 0x18: { Fc = false; } break;
+				case 0xf8: { Fd = true; } break;
+				case 0xd8: { Fd = false; } break;
+				case 0x78: { Fi = true; } break;
+				case 0x58: { Fi = false; } break;
+				case 0xb8: { Fv = false; } break;
 
 				case 0xea: { } break;
 
@@ -349,6 +353,8 @@ namespace NesSharp
 					break;
 			}
 
+			SetProcessorStatus();
+
 			if (pagecrossed)
 			{
 				cycles++;
@@ -360,7 +366,6 @@ namespace NesSharp
 			cycles += cyclestable[op];
 			totalcycles += cyclestable[op];
 			ppucycles += cyclestable[op] * 3;
-			framecycles += cyclestable[op] * 3;
 
 			if (c.ppu.ppunmi)
 				NMI();
@@ -465,7 +470,7 @@ namespace NesSharp
 
 		private void BVS(int v)
 		{
-			if (fv)
+			if (Fv)
 			{
 				Pc = v;
 				cycles++;
@@ -480,7 +485,7 @@ namespace NesSharp
 
 		private void BCS(int v)
 		{
-			if (fc)
+			if (Fc)
 			{
 				Pc = v;
 				cycles++;
@@ -495,7 +500,7 @@ namespace NesSharp
 
 		private void BEQ(int v)
 		{
-			if (fz)
+			if (Fz)
 			{
 				Pc = v;
 				cycles++;
@@ -510,7 +515,7 @@ namespace NesSharp
 
 		private void BPL(int v)
 		{
-			if (!fn)
+			if (!Fn)
 			{
 				Pc = v;
 				cycles++;
@@ -525,7 +530,7 @@ namespace NesSharp
 
 		private void BMI(int v)
 		{
-			if (fn)
+			if (Fn)
 			{
 				Pc = v;
 				cycles++;
@@ -540,7 +545,7 @@ namespace NesSharp
 
 		private void BNE(int v)
 		{
-			if (!fz)
+			if (!Fz)
 			{
 				Pc = v;
 				cycles++;
@@ -555,7 +560,7 @@ namespace NesSharp
 
 		private void BVC(int v)
 		{
-			if (!fv)
+			if (!Fv)
 			{
 				Pc = v;
 				cycles++;
@@ -570,7 +575,7 @@ namespace NesSharp
 
 		private void BCC(int v)
 		{
-			if (!fc)
+			if (!Fc)
 			{
 				Pc = v;
 				cycles++;
@@ -672,8 +677,8 @@ namespace NesSharp
 		{
 			int v = c.mapper.CpuRead(Pc);
 			int t = Y - v;
-			fc = Y >= v;
-			fz = Y == v;
+			Fc = Y >= v;
+			Fz = Y == v;
 			SetNegative(t);
 		}
 
@@ -681,8 +686,8 @@ namespace NesSharp
 		{
 			v = c.mapper.CpuRead(v);
 			int t = Y - v;
-			fc = Y >= v;
-			fz = Y == v;
+			Fc = Y >= v;
+			Fz = Y == v;
 			SetNegative(t);
 		}
 
@@ -690,8 +695,8 @@ namespace NesSharp
 		{
 			int v = c.mapper.CpuRead(Pc);
 			int t = X - v;
-			fc = X >= v;
-			fz = X == v;
+			Fc = X >= v;
+			Fz = X == v;
 			SetNegative(t);
 		}
 
@@ -699,8 +704,8 @@ namespace NesSharp
 		{
 			v = c.mapper.CpuRead(v);
 			int t = X - v;
-			fc = X >= v;
-			fz = X == v;
+			Fc = X >= v;
+			Fz = X == v;
 			SetNegative(t);
 		}
 
@@ -708,8 +713,8 @@ namespace NesSharp
 		{
 			int v = c.mapper.CpuRead(Pc);
 			int t = A - v;
-			fc = A >= v;
-			fz = A == v;
+			Fc = A >= v;
+			Fz = A == v;
 			SetNegative(t);
 		}
 
@@ -717,8 +722,8 @@ namespace NesSharp
 		{
 			v = c.mapper.CpuRead(v);
 			int t = A - v;
-			fc = A >= v;
-			fz = A == v;
+			Fc = A >= v;
+			Fz = A == v;
 			SetNegative(t);
 		}
 
@@ -753,44 +758,44 @@ namespace NesSharp
 		private void SBC()
 		{
 			int v = c.mapper.CpuRead(Pc);
-			int r = A + ~v + (fc ? 1 : 0);
+			int r = A + ~v + (Fc ? 1 : 0);
 			SetZero(r);
 			SetNegative(r);
-			fv = ((A ^ v) & (A ^ r) & 0x80) > 0;
-			fc = (r & 0xff00) == 0;
+			Fv = ((A ^ v) & (A ^ r) & 0x80) > 0;
+			Fc = (r & 0xff00) == 0;
 			A = (u8)r;
 		}
 
 		private void SBCM(int v)
 		{
 			v = c.mapper.CpuRead(v);
-			int r = A + ~v + (fc ? 1 : 0);
+			int r = A + ~v + (Fc ? 1 : 0);
 			SetZero(r);
 			SetNegative(r);
-			fv = ((A ^ v) & (A ^ r) & 0x80) > 0;
-			fc = (r & 0xff00) == 0;
+			Fv = ((A ^ v) & (A ^ r) & 0x80) > 0;
+			Fc = (r & 0xff00) == 0;
 			A = (u8)r;
 		}
 
 		private void ADC()
 		{
 			int v = c.mapper.CpuRead(Pc);
-			int r = A + v + (fc ? 1 : 0);
+			int r = A + v + (Fc ? 1 : 0);
 			SetZero(r);
 			SetNegative(r);
-			fv = (~(A ^ v) & (A ^ r) & 0x80) > 0;
-			fc = r > 255;
+			Fv = (~(A ^ v) & (A ^ r) & 0x80) > 0;
+			Fc = r > 255;
 			A = (u8)r;
 		}
 
 		private void ADCM(int v)
 		{
 			v = c.mapper.CpuRead(v);
-			int r = A + v + (fc ? 1 : 0);
+			int r = A + v + (Fc ? 1 : 0);
 			SetZero(r);
 			SetNegative(r);
-			fv = (~(A ^ v) & (A ^ r) & 0x80) > 0;
-			fc = r > 255;
+			Fv = (~(A ^ v) & (A ^ r) & 0x80) > 0;
+			Fc = r > 255;
 			A = (u8)r;
 		}
 
@@ -810,25 +815,26 @@ namespace NesSharp
 
 		private void UpdateFlags()
 		{
-			fc = (Ps & 0x01) > 0;
-			fz = (Ps & 0x02) > 0;
-			fi = (Ps & 0x04) > 0;
-			fd = (Ps & 0x08) > 0;
-			//fb = (ps & 0x10) > 0 ? true : false;
-			fv = (Ps & 0x40) > 0;
-			fn = (Ps & 0x80) > 0;
+			Fc = (Ps & 0x01) > 0;
+			Fz = (Ps & 0x02) > 0;
+			Fi = (Ps & 0x04) > 0;
+			Fd = (Ps & 0x08) > 0;
+			Fb = (ps & 0x10) > 0;
+			Fu = (ps & 0x20) > 0;
+			Fv = (Ps & 0x40) > 0;
+			Fn = (Ps & 0x80) > 0;
 		}
 
 		private void SetProcessorStatus()
 		{
 			int t = 0;
-			if (fc) t |= 0x01;
-			if (fz) t |= 0x02;
-			if (fi) t |= 0x04;
-			if (fd) t |= 0x08;
-			if (fb) t |= 0x10;
-			if (fv) t |= 0x40;
-			if (fv) t |= 0x80;
+			if (Fc) t |= 0x01;
+			if (Fz) t |= 0x02;
+			if (Fi) t |= 0x04;
+			if (Fd) t |= 0x08;
+			if (Fb) t |= 0x10;
+			if (Fv) t |= 0x40;
+			if (Fn) t |= 0x80;
 
 			Ps = (u8)(t | 0x20);
 		}
@@ -893,11 +899,11 @@ namespace NesSharp
 		{
 			bool bit7 = (A & (1 << 7)) > 0;
 			A <<= 1 & 0xff;
-			if (fc)
+			if (Fc)
 				A |= (1 << 0);
 			SetZero(A);
 			SetNegative(A);
-			fc = bit7;
+			Fc = bit7;
 		}
 
 		private void ROLM(int v)
@@ -905,9 +911,9 @@ namespace NesSharp
 			int r = c.mapper.CpuRead(v);
 			bool bit7 = (r & (1 << 7)) > 0;
 			r <<= 1;
-			if (fc)
+			if (Fc)
 				r |= (1 << 0);
-			fc = bit7;
+			Fc = bit7;
 			c.mapper.CpuWrite(v, (u8)r);
 			SetZero(r);
 			SetNegative(r);
@@ -915,7 +921,7 @@ namespace NesSharp
 
 		private void ASL()
 		{
-			fc = (A & (1 << 7)) > 0;
+			Fc = (A & (1 << 7)) > 0;
 			A = (u8)((A << 1) & 0xfe);
 			SetZero(A);
 			SetNegative(A);
@@ -924,7 +930,7 @@ namespace NesSharp
 		private void ASLM(int v)
 		{
 			int r = c.mapper.CpuRead(v);
-			fc = (r & (1 << 7)) > 0;
+			Fc = (r & (1 << 7)) > 0;
 			r = (r << 1) & 0xfe;
 			c.mapper.CpuWrite(v, (u8)r);
 			SetZero(r);
@@ -935,11 +941,11 @@ namespace NesSharp
 		{
 			bool bit0 = (A & (1 << 0)) > 0;
 			A >>= 1 & 0xff;
-			if (fc)
+			if (Fc)
 				A |= (1 << 7);
 			SetZero(A);
 			SetNegative(A);
-			fc = bit0;
+			Fc = bit0;
 		}
 
 		private void RORM(int v)
@@ -947,9 +953,9 @@ namespace NesSharp
 			int r = c.mapper.CpuRead(v);
 			bool bit0 = (r & (1 << 0)) > 0;
 			r >>= 1;
-			if (fc)
+			if (Fc)
 				r |= (1 << 7);
-			fc = bit0;
+			Fc = bit0;
 			c.mapper.CpuWrite(v, (u8)r);
 			SetZero(r);
 			SetNegative(r);
@@ -957,7 +963,7 @@ namespace NesSharp
 
 		private void LSR()
 		{
-			fc = (A & (1 << 0)) > 0;
+			Fc = (A & (1 << 0)) > 0;
 			A = (u8)((A >> 1) & 0x7f);
 			SetZero(A);
 			SetNegative(A);
@@ -966,7 +972,7 @@ namespace NesSharp
 		private void LSRM(int v)
 		{
 			int r = c.mapper.CpuRead(v);
-			fc = (A & (1 << 0)) > 0;
+			Fc = (A & (1 << 0)) > 0;
 			r = (u8)((r >> 1) & 0x7f);
 			c.mapper.CpuWrite(v, (u8)r);
 			SetZero(r);
@@ -975,17 +981,17 @@ namespace NesSharp
 
 		private void SetZero(int v)
 		{
-			fz = (u8)v == 0;
+			Fz = (u8)v == 0;
 		}
 
 		private void SetNegative(int v)
 		{
-			fn = ((u8)(v >> 7) & 1) > 0;
+			Fn = ((u8)(v >> 7) & 1) > 0;
 		}
 
 		private void SetOverflow(int v)
 		{
-			fv = ((u8)(v >> 6) & 1) > 0;
+			Fv = ((u8)(v >> 6) & 1) > 0;
 		}
 
 		private int GetZERP()
@@ -1065,14 +1071,14 @@ namespace NesSharp
 		{
 			StringBuilder sb = new StringBuilder();
 			sb.Append("P:");
-			sb.Append(fn ? "N" : "n");
-			sb.Append(fv ? "V" : "v");
-			sb.Append(fu ? "U" : "u");
-			sb.Append(fb ? "B" : "b");
-			sb.Append(fd ? "D" : "d");
-			sb.Append(fi ? "I" : "i");
-			sb.Append(fz ? "Z" : "z");
-			sb.Append(fc ? "C" : "c");
+			sb.Append(Fn ? "N" : "n");
+			sb.Append(Fv ? "V" : "v");
+			sb.Append(Fu ? "U" : "u");
+			sb.Append(Fb ? "B" : "b");
+			sb.Append(Fd ? "D" : "d");
+			sb.Append(Fi ? "I" : "i");
+			sb.Append(Fz ? "Z" : "z");
+			sb.Append(Fc ? "C" : "c");
 			sb.Append(" ");
 			return sb.ToString();
 		}

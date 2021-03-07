@@ -10,9 +10,9 @@ namespace NesSharp
 	{
 		public Dictionary<int, string[]> opnames;
 		public List<string> tracelines;
-		private Core c;
+		private Main c;
 
-		public Tracer(Core core)
+		public Tracer(Main core)
 		{
 			c = core;
 			tracelines = new List<string>();
@@ -225,16 +225,40 @@ namespace NesSharp
 			opnames[0x40] = new[] { "RTI", "IMPL" };
 			opnames[0x00] = new[] { "BRK", "IMPL" };
 
-			////Unofficial Implied
-			//opnames[0x1a] = new[] { "", "NULL" };
-			//opnames[0x3a] = new[] { "", "NULL" };
-			//opnames[0x5a] = new[] { "", "NULL" };
-			//opnames[0x7a] = new[] { "", "NULL" };
-			//opnames[0xda] = new[] { "", "NULL" };
-			//opnames[0xfa] = new[] { "", "NULL" };
+			//Unofficial Implied
+			opnames[0x02] = new[] { "", "IMPL" };
+			opnames[0x12] = new[] { "", "IMPL" };
+			opnames[0x22] = new[] { "", "IMPL" };
+			opnames[0x32] = new[] { "", "IMPL" };
+			opnames[0x42] = new[] { "", "IMPL" };
+			opnames[0x52] = new[] { "", "IMPL" };
+			opnames[0x62] = new[] { "", "IMPL" };
+			opnames[0x72] = new[] { "", "IMPL" };
+			opnames[0x92] = new[] { "", "IMPL" };
+			opnames[0xb2] = new[] { "", "IMPL" };
+			opnames[0xd2] = new[] { "", "IMPL" };
+			opnames[0xf2] = new[] { "", "IMPL" };
+			opnames[0x1a] = new[] { "", "IMPL" };
+			opnames[0x3a] = new[] { "", "IMPL" };
+			opnames[0x5a] = new[] { "", "IMPL" };
+			opnames[0x7a] = new[] { "", "IMPL" };
+			opnames[0xda] = new[] { "", "IMPL" };
+			opnames[0xfa] = new[] { "", "IMPL" };
 
-			////Unofficial Immediate
-			//opnames[0xeb] = new[] { "", "NULL" };
+			//Unofficial Immediate
+			opnames[0x0b] = new[] { "", "IMME" };
+			opnames[0x2b] = new[] { "", "IMME" };
+			opnames[0x6b] = new[] { "", "IMME" };
+			opnames[0x4b] = new[] { "", "IMME" }; 
+			opnames[0xab] = new[] { "", "IMME" };
+			opnames[0xcb] = new[] { "", "IMME" };
+			opnames[0x80] = new[] { "", "IMME" };
+			opnames[0x82] = new[] { "", "IMME" };
+			opnames[0x89] = new[] { "", "IMME" };
+			opnames[0xc2] = new[] { "", "IMME" };
+			opnames[0xe2] = new[] { "", "IMME" };
+			opnames[0xeb] = new[] { "", "IMME" };
+			opnames[0x8b] = new[] { "", "IMME" };
 
 			//opnames[0x80] = new[] { "", "NULL" };
 			//opnames[0x82] = new[] { "", "NULL" };
@@ -407,6 +431,9 @@ namespace NesSharp
 					break;
 			}
 
+			if (strins == "")
+				strins = $"UNDEFINED";
+
 			sb.Append($"${strpc,-14} {strins,-45}");
 
 			if (!debugger)
@@ -417,7 +444,7 @@ namespace NesSharp
 				tracelines.Add(sb.ToString());
 			}
 
-			opsize = 0;
+			opsize = 1;
 			switch (mode)
 			{
 				case "IMPL":

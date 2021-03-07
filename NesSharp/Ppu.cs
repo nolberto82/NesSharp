@@ -19,7 +19,7 @@ namespace NesSharp
 		public u8 ppuoamdata;
 		private bool background8px;
 		private bool backgroundrender;
-		private Core c;
+		private Main c;
 		private Image emuimg;
 		public Sprite emusprite;
 		public Texture emutex;
@@ -52,7 +52,7 @@ namespace NesSharp
 		public ulong frame;
 		private VertexArray vgfx;
 
-		public Ppu(Core core, RenderWindow w)
+		public Ppu(Main core, RenderWindow w)
 		{
 			c = core;
 			window = w;

@@ -12,8 +12,8 @@ namespace NesSharp
 		public byte[] ram;
 		public byte[] rom;
 		public byte[] vram;
-		Core c;
-		public Mapper(Core core, string gamename)
+		Main c;
+		public Mapper(Main core, string gamename)
         {
             c = core;
 
