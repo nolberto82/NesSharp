@@ -294,12 +294,12 @@ namespace NesSharp
 		{
 			string strpc = "";
 			string strins = "";
-			int b0 = 0;
-			int b1 = 0;
-			int b2 = 0;
-			int b3 = 0;
-			int addr = 0;
-			int v = 0;
+			int b0;
+			int b1;
+			int b2;
+			int b3;
+			int addr;
+			int v;
 			string mode = opnames.ContainsKey(op) ? opnames[op][1] : "NULL";
 
 			StringBuilder sb = new StringBuilder();
@@ -318,7 +318,6 @@ namespace NesSharp
 					b1 = c.mapper.CpuReadDebug(pc + 1);
 					strpc = $"{pc:X4}:{op:X2} {b1:X2}";
 					strins = $"{opnames[op][0]} #${b1:X2}";
-					opsize = 2;
 					break;
 				case "ZERP":
 					b1 = c.mapper.CpuReadDebug(pc + 1);
@@ -329,8 +328,6 @@ namespace NesSharp
 				case "ZERX":
 					b0 = c.mapper.CpuReadDebug(pc + 1);
 					b1 = (u8)(b0 + x);
-					b2 = c.mapper.CpuReadDebug(b1);
-					b3 = c.mapper.CpuReadDebug((u8)(b1 + 1));
 					v = c.mapper.CpuReadDebug(b1);
 					strpc = $"{pc:X4}:{op:X2} {b1:X2}";
 					strins = $"{opnames[op][0]} ${b0:X4},X @ ${b1:X4} = #${v:X2}";
@@ -338,8 +335,6 @@ namespace NesSharp
 				case "ZERY":
 					b0 = c.mapper.CpuReadDebug(pc + 1);
 					b1 = (u8)(b0 + y);
-					b2 = c.mapper.CpuReadDebug(b1);
-					b3 = c.mapper.CpuReadDebug((u8)(b1 + 1));
 					v = c.mapper.CpuReadDebug(b1);
 					strpc = $"{pc:X4}:{op:X2} {b1:X2}";
 					strins = $"{opnames[op][0]} ${b0:X4},Y @ ${b1:X4} = #${v:X2}";
@@ -373,7 +368,6 @@ namespace NesSharp
 				case "ABSY":
 					b1 = c.mapper.CpuReadDebug(pc + 1);
 					b2 = c.mapper.CpuReadDebug(pc + 2);
-					b0 = ((b2 << 8) | b1);
 					addr = (((b2 << 8) | b1) + y) & 0xffff;
 					v = c.mapper.CpuReadDebug(addr);
 					strpc = $"{pc:X4}:{op:X2} {b1:X2} {b2:X2}";
@@ -396,7 +390,6 @@ namespace NesSharp
 					b2 = c.mapper.CpuReadDebug(b1);
 					b3 = c.mapper.CpuReadDebug((u8)(b1 + 1));
 					addr = (((b3 << 8) | b2) + y) & 0xffff;
-					b1 = ((b3 << 8) | b2) & 0xffff;
 					v = c.mapper.CpuReadDebug(addr);
 					strpc = $"{pc:X4}:{op:X2} {b0:X2}";
 					strins = $"{opnames[op][0]} (${b0:X2}),Y @ ${addr:X4} = #${v:X2}";

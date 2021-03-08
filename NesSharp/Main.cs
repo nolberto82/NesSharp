@@ -26,22 +26,16 @@ namespace NesSharp
 		public Tracer tracer;
 		public Gui gui;
 		public Clock clock = new Clock();
-		private bool initializedone;
-		private bool fileselectopen;
 
 		public int state;
 
-		private bool debugmode;
-
 		public void Run()
 		{
-			//using (RenderWindow window = new RenderWindow(new VideoMode(256, 240), "Nes Sharp"))
-			//{
 			var window = new RenderWindow(new SFML.Window.VideoMode(256, 240), "Nes Sharp");
 			GuiImpl.Init(window);
 			window.Closed += (s, e) => window.Close();
-			window.Size = new Vector2u(window.Size.X * 3, window.Size.Y * 3);
-			window.Position = new Vector2i((int)(window.Size.X / 2), (int)(window.Size.Y / 6));
+			window.Size = new Vector2u(window.Size.X * 5, window.Size.Y * 3);
+			window.Position = new Vector2i(20, 20);
 
 			window.SetFramerateLimit(60);
 
@@ -58,7 +52,7 @@ namespace NesSharp
 
 				//if (mapper == null)
 				//	break;
-				window.Clear();
+				//window.Clear();
 
 				switch (state)
 				{
@@ -70,18 +64,25 @@ namespace NesSharp
 
 						if (ppu.ppu_scanline == 261)
 						{
+							window.Clear();
 							GuiImpl.Update(window, clock.Restart());
+							//ppu.emutex.Update(ppu.bfxdata);
 							ppu.emutex.Update(ppu.gfxdata);
 							ppu.emusprite.Texture = ppu.emutex;
 
-							gui.MainMenu(window);
+							gui.MainMenu();
+
+							if (gui.resetemu)
+								Initialize(window);
 
 							if (gui.filemanager)
 							{
 								gui.LoadFile(window, clock);
-								//Initialize(window);
 								break;
 							}
+
+							if (gui.showram)
+								gui.MemoryView();
 
 							window.Draw(ppu.emusprite);
 							GuiImpl.Render(window);
@@ -90,16 +91,17 @@ namespace NesSharp
 						break;
 					case State.Debug:
 						GuiImpl.Update(window, clock.Restart());
-						gui.MainMenu(window);
+						gui.MainMenu();
 
 						if (gui.filemanager)
 						{
-							state = State.Reset;
+							//state = State.Reset;
 							gui.LoadFile(window, clock);
 							continue;
 						}
 
 						gui.DebuggerView();
+						//gui.MemoryView();
 
 						window.Draw(ppu.emusprite);
 						GuiImpl.Render(window);
@@ -107,7 +109,7 @@ namespace NesSharp
 						break;
 					case State.Reset:
 						GuiImpl.Update(window, clock.Restart());
-						gui.MainMenu(window);
+						gui.MainMenu();
 						gui.LoadFile(window, clock);
 						GuiImpl.Render(window);
 						window.Display();

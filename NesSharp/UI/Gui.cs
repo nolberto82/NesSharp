@@ -18,29 +18,48 @@ namespace NesSharp.UI
 		public bool filemanager;
 		private string inputtext;
 		private bool jumpto;
+		public bool resetemu;
+		public bool showram;
+		private MemoryEditor mem;
 
 		public Gui(Main core)
 		{
 			c = core;
+			mem = new MemoryEditor();
 			inputtext = "";
 		}
 
-		public void MainMenu(RenderWindow window)
+		public void MainMenu()
 		{
 			if (ImGui.BeginMainMenuBar())
 			{
 				if (ImGui.BeginMenu("File"))
 				{
 					filemanager = ImGui.MenuItem("Open");
+					//if (ImGui.MenuItem("Reset") && c.cpu != null)
+					///	c.showram = true;
 					ImGui.EndMenu();
 				}
 
-				if (ImGui.BeginMenu("Debug"))
+				if (c.state == State.Running)
 				{
-					if (ImGui.MenuItem("Debugger") && c.cpu != null)
-						c.state = State.Debug;
-					ImGui.EndMenu();
+					if (ImGui.BeginMenu("Debug"))
+					{
+						if (ImGui.MenuItem("Debugger"))
+							c.state = State.Debug;
+						if (ImGui.MenuItem("Memory"))
+							showram = true;
+						ImGui.EndMenu();
+					}
+
+					if (ImGui.BeginMenu("Tracer") && c.state == State.Running)
+					{
+						if (ImGui.MenuItem("Trace") && c.cpu != null)
+							c.cpu.trace = !c.cpu.trace;
+						ImGui.EndMenu();
+					}
 				}
+
 				ImGui.EndMainMenuBar();
 			}
 		}
@@ -53,7 +72,8 @@ namespace NesSharp.UI
 				GuiImpl.Update(window, clock.Restart());
 				window.Clear();
 
-				MainMenu(window);
+				MainMenu();
+
 				if (filemanager)
 				{
 					int romselectindex = 0;
@@ -66,6 +86,7 @@ namespace NesSharp.UI
 						{
 							c.cpu.LoadRom(folder + "/" + files[romselectindex]);
 							c.state = State.Running;
+							//c.state = State.Debug;
 							filemanager = false;
 						}
 
@@ -80,6 +101,9 @@ namespace NesSharp.UI
 
 		public void DebuggerView()
 		{
+			if (c.cpu == null)
+				return;
+
 			if (ImGui.Begin("Debugger"))
 			{
 				if (ImGui.BeginChild("Buttons"))
@@ -106,10 +130,19 @@ namespace NesSharp.UI
 
 					ImGui.SameLine();
 
-					if (ImGui.Button("Goto"))
+					if (ImGui.Button("Add BP"))
 					{
-						jumpto = true;
+						if (ImGui.Begin("Breakpoints"))
+						{
+							ImGui.Text("123");
+							ImGui.End();
+						}
 					}
+
+					ImGui.SameLine();
+
+					if (ImGui.Button("Goto"))
+						jumpto = true;
 
 					if (inputtext.Length < 4)
 						jumpto = false;
@@ -132,13 +165,11 @@ namespace NesSharp.UI
 					ImGui.Separator();
 				}
 
-
-
 				int lines = (int)Math.Min(ImGui.GetContentRegionAvail().Y / ImGui.GetTextLineHeightWithSpacing(), 512);
 				int Pc = (jumpto ? Convert.ToInt32(inputtext, 16) : c.cpu.Pc);// - lines / 2;
 				int dpc = 0;
 				if (c.cpu.breakpoints.Count > 0)
-					dpc = c.cpu.breakpoints.FirstOrDefault(p => p.IsBP).Offset;
+					dpc = c.cpu.breakpoints.FirstOrDefault(p => p.BpType == Breakpoint.Type.Execute).Offset;
 
 				if (ImGui.BeginChild(""))
 				{
@@ -151,16 +182,6 @@ namespace NesSharp.UI
 						bool v = res != null ? true : false;
 						u8 Op = c.mapper.ram[Pc];
 						string line = c.tracer.DisassembleFCEUXFormat(Op, Pc, c.cpu.A, c.cpu.X, c.cpu.Y, c.cpu.Ps, c.cpu.Sp, out opsize, 0, true);
-
-						if (ImGui.Checkbox("", ref v))
-						{
-							if (res != null)
-								c.cpu.breakpoints.Remove(res);
-							else
-								c.cpu.breakpoints.Add(new Breakpoint(Pc, v));
-						}
-
-						ImGui.SameLine();
 
 						if (Pc == c.cpu.Pc)
 							ImGui.Selectable(line, true);
@@ -178,6 +199,11 @@ namespace NesSharp.UI
 				}
 				ImGui.End();
 			}
+		}
+
+		public void MemoryView()
+		{
+			mem.Draw("Memory", c.mapper.ram, c.mapper.ram.Length);
 		}
 
 		private void ShowRegisters()
@@ -213,12 +239,12 @@ namespace NesSharp.UI
 			ImGui.PushItemWidth(1);
 			ImGui.LabelText(labeltext, "");
 			ImGui.PopItemWidth();
-			ImGui.SameLine(0,1);
+			ImGui.SameLine(0, 1);
 
 			ImGui.PushItemWidth(width);
 			ImGui.InputText("##" + inputspace.ToString(), ref inputtext, size, ImGuiInputTextFlags.CharsHexadecimal | ImGuiInputTextFlags.CharsUppercase);
 			ImGui.PopItemWidth();
-			ImGui.SameLine(0,2);
+			ImGui.SameLine(0, 2);
 		}
 	}
 }

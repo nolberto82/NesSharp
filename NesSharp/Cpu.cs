@@ -28,7 +28,7 @@ namespace NesSharp
 		private bool fv;
 		private bool fn;
 
-		private bool trace;
+		public bool trace;
 
 		private u8 op;
 
@@ -43,7 +43,6 @@ namespace NesSharp
 		public int cycles;
 		public int ppucycles;
 		public int totalcycles;
-		private int framecycles;
 
 		private const int SCANCYCLES = 341;
 
@@ -121,11 +120,14 @@ namespace NesSharp
 			{
 				Execute();
 
-				var res = breakpoints.FirstOrDefault(b => b.Offset == Pc);
-				if (res != null && res.IsBP)
+				if (breakpoints.Count > 0)
 				{
-					Breakmode = true;
-					return;
+					var res = breakpoints.FirstOrDefault(b => b.Offset == Pc);
+					if (res != null && res.BpType == Breakpoint.Type.Execute)
+					{
+						Breakmode = true;
+						return;
+					}
 				}
 			}
 
@@ -134,6 +136,8 @@ namespace NesSharp
 
 		private void Execute()
 		{
+			if (pc > 0xffff)
+				Environment.Exit(0); ;
 			op = c.mapper.ram[Pc++];
 
 			if (trace)
@@ -381,13 +385,13 @@ namespace NesSharp
 		public void NMI()
 		{
 			//pc++;
-			c.mapper.CpuWrite(Sp | 0x100, (u8)(Pc >> 8));
+			c.mapper.ram[Sp | 0x100] = (u8)(Pc >> 8);
 			Sp--;
-			c.mapper.CpuWrite(Sp | 0x100, (u8)Pc);
+			c.mapper.ram[Sp | 0x100] = (u8)Pc;
 			Sp--;
-			c.mapper.CpuWrite(Sp | 0x100, Ps);
+			c.mapper.ram[Sp | 0x100] = Ps;
 			Sp--;
-			Pc = (c.mapper.CpuRead(0xfffb) << 8) | c.mapper.CpuRead(0xfffa);
+			Pc = (c.mapper.ram[0xfffb] << 8) | c.mapper.ram[0xfffa];
 			c.ppu.ppunmi = false;
 			cycles += 7;
 			totalcycles += 7;
@@ -398,26 +402,26 @@ namespace NesSharp
 		{
 			PLP();
 			Sp++;
-			Pc = c.mapper.CpuRead(Sp | 0x100);
+			Pc = c.mapper.ram[Sp | 0x100];
 			Sp++;
-			Pc |= c.mapper.CpuRead(Sp | 0x100) << 8;
+			Pc |= c.mapper.ram[Sp | 0x100] << 8;
 		}
 
 		private void RTS()
 		{
 			Sp++;
-			Pc = c.mapper.CpuRead(Sp | 0x100);
+			Pc = c.mapper.ram[Sp | 0x100];
 			Sp++;
-			Pc |= c.mapper.CpuRead(Sp | 0x100) << 8;
+			Pc |= c.mapper.ram[Sp | 0x100] << 8;
 			Pc++;
 		}
 
 		private void JSR(int v)
 		{
 			Pc++;
-			c.mapper.CpuWrite(Sp | 0x100, (u8)(Pc >> 8));
+			c.mapper.ram[Sp | 0x100] = (u8)(Pc >> 8);
 			Sp--;
-			c.mapper.CpuWrite(Sp | 0x100, (u8)Pc);
+			c.mapper.ram[Sp | 0x100] = (u8)Pc;
 			Sp--;
 			Pc = v;
 		}
@@ -442,29 +446,28 @@ namespace NesSharp
 		private void PLP()
 		{
 			Sp++;
-			Ps = c.mapper.CpuRead(Sp | 0x100);
+			Ps = c.mapper.ram[Sp | 0x100];
 			UpdateFlags();
-			//ps = (u8)(ps & 0xef);
 		}
 
 		private void PLA()
 		{
 			Sp++;
-			A = c.mapper.CpuRead(Sp | 0x100);
+			A = c.mapper.ram[Sp | 0x100];
 			SetZero(A);
 			SetNegative(A);
 		}
 
 		private void PHP()
 		{
-			c.mapper.CpuWrite(Sp | 0x100, (u8)(Ps | 0x30));
+			c.mapper.ram[Sp | 0x100] = (u8)(Ps | 0x30);
 			Sp--;
 			UpdateFlags();
 		}
 
 		private void PHA()
 		{
-			c.mapper.CpuWrite(Sp | 0x100, A);
+			c.mapper.ram[Sp | 0x100] = A;
 			Sp--;
 		}
 

@@ -116,7 +116,7 @@ namespace NesSharp
 			int chrrom = chrbanks * 0x2000;
 			int prgsize = prgrom / prgbanks;
 			int chrsize = chrrom > 0 ? chrrom / chrbanks : 0;
-			int mappernum = rom[8] & 0x0f;
+			int mappernum = (rom[6] & 0xf0)>> 4;
 			c.ppu.mirrornametable = 0;
 
 			if ((rom[6] & 0x08) > 0)
@@ -144,6 +144,9 @@ namespace NesSharp
 						if (chrsize > 0)
 							Array.Copy(rom, 0x10 + prgrom, vram, 0, chrrom);
 					}
+					break;
+				case 1:
+
 					break;
 			}
 		}
