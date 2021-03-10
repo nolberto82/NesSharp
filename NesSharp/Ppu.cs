@@ -114,7 +114,6 @@ namespace NesSharp
 		private void ClearVBlank()
 		{
 			ppustatus &= 0x7f;
-			c.mapper.ram[0x2002] = ppustatus;
 		}
 
 		public void ControlWrite(u8 val)
@@ -196,7 +195,7 @@ namespace NesSharp
 		{
 			if (ppu_scanline < 239)
 			{
-				if (spritesrender)
+				if (spritesrender & backgroundrender)
 				{
 					int oamaddr = 0x0100 * ppuoamdma;
 					u8 y = c.mapper.ram[oamaddr + 0];
@@ -205,6 +204,9 @@ namespace NesSharp
 					if (y + 6 == ppu_scanline)
 						SetSpriteZero();
 				}
+
+				//for (int i = 0; i < 256; i++)
+				//	gfxdata[ppu_scanline * 256 + i] = 0x00;
 
 				if (backgroundrender) //is background rendering on?
 				{
@@ -223,7 +225,8 @@ namespace NesSharp
 				{
 					SetVBlank();
 					SetNMI();
-					SetSpriteZero();
+					ClearSpriteZero();
+					//SetSpriteZero();
 					//DrawFrame();
 					ppu_cyc++;
 				}
@@ -233,7 +236,7 @@ namespace NesSharp
 				if (ppu_cyc == 1)
 				{
 					ClearVBlank();
-					ClearSpriteZero();
+					//ClearSpriteZero();
 					ppu_cyc = 2;
 				}
 			}
@@ -280,11 +283,15 @@ namespace NesSharp
 
 		public u8 StatusRead(u16 addr)
 		{
+			if ((ppustatus & 0x80) > 0)
+			{
+				int yu = 0;
+			}
 			u8 val = ppustatus;
 			ClearVBlank();
 			c.mapper.ram[addr] = ppustatus;
 			ppu_w = false;
-			return val; ;
+			return val;
 		}
 		private void ClearSpriteZero()
 		{
@@ -623,11 +630,13 @@ namespace NesSharp
 		private void SetSpriteZero()
 		{
 			ppustatus |= 0x40;
+			c.mapper.ram[0x2002] = ppustatus;
 		}
 
 		private void SetVBlank()
 		{
 			ppustatus |= 0x80;
+			c.mapper.ram[0x2002] = ppustatus;
 		}
 	}
 }

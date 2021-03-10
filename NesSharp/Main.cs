@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using ImGuiNET;
-//using ImGuiSfmlNet;
 using Saffron2D.GuiCollection;
 using ImVec2 = System.Numerics.Vector2;
 using ImVec3 = System.Numerics.Vector3;
@@ -34,14 +33,18 @@ namespace NesSharp
 			var window = new RenderWindow(new SFML.Window.VideoMode(256, 240), "Nes Sharp");
 			GuiImpl.Init(window);
 			window.Closed += (s, e) => window.Close();
-			window.Size = new Vector2u(window.Size.X * 5, window.Size.Y * 3);
+			window.Size = new Vector2u(window.Size.X * 6 - 170, window.Size.Y * 4);
 			window.Position = new Vector2i(20, 20);
 
 			window.SetFramerateLimit(60);
 
 			state = State.Reset;
 
-			Initialize(window);
+			gui = new Gui(this);
+
+			gui.filemanager = true;
+
+			SetAppStyle();
 
 			while (window.IsOpen)
 			{
@@ -50,67 +53,33 @@ namespace NesSharp
 				if (!window.IsOpen)
 					break;
 
-				//if (mapper == null)
-				//	break;
-				//window.Clear();
-
 				switch (state)
 				{
 					case State.Running:
 						cpu.Step();
 						ppu.RenderScanline();
+
 						if (cpu.Breakmode)
 							state = State.Debug;
 
-						if (ppu.ppu_scanline == 261)
-						{
-							window.Clear();
-							GuiImpl.Update(window, clock.Restart());
-							//ppu.emutex.Update(ppu.bfxdata);
-							ppu.emutex.Update(ppu.gfxdata);
-							ppu.emusprite.Texture = ppu.emutex;
-
-							gui.MainMenu();
-
-							if (gui.resetemu)
-								Initialize(window);
-
-							if (gui.filemanager)
-							{
-								gui.LoadFile(window, clock);
-								break;
-							}
-
-							if (gui.showram)
-								gui.MemoryView();
-
-							window.Draw(ppu.emusprite);
-							GuiImpl.Render(window);
-							window.Display();
-						}
-						break;
-					case State.Debug:
-						GuiImpl.Update(window, clock.Restart());
-						gui.MainMenu();
-
-						if (gui.filemanager)
-						{
-							//state = State.Reset;
-							gui.LoadFile(window, clock);
-							continue;
-						}
-
-						gui.DebuggerView();
-						//gui.MemoryView();
-
-						window.Draw(ppu.emusprite);
-						GuiImpl.Render(window);
-						window.Display();
+						UpdateScreen(window);
 						break;
 					case State.Reset:
 						GuiImpl.Update(window, clock.Restart());
+
 						gui.MainMenu();
-						gui.LoadFile(window, clock);
+						Initialize(window, gui.LoadFile(window, clock));
+
+						GuiImpl.Render(window);
+						window.Display();
+						break;
+					case State.Debug:
+						GuiImpl.Update(window, clock.Restart());
+
+						gui.MainMenu();
+						gui.MemoryView(window);
+						gui.DebuggerView(window);
+
 						GuiImpl.Render(window);
 						window.Display();
 						break;
@@ -129,13 +98,59 @@ namespace NesSharp
 			GuiImpl.Shutdown();
 		}
 
-		private void Initialize(RenderWindow window)
+		private void UpdateScreen(RenderWindow window)
+		{
+			if (ppu.ppu_scanline == 261)
+			{
+				window.Clear();
+				GuiImpl.Update(window, clock.Restart());
+
+				ppu.emutex.Update(ppu.gfxdata);
+				ppu.emusprite.Texture = ppu.emutex;
+
+				float wsize = gui.MainMenu();
+
+				if (gui.resetemu)
+					Initialize(window,"");
+
+				if (gui.filemanager)
+				{
+					Initialize(window, gui.LoadFile(window, clock));
+					return;
+				}
+
+				gui.BreakpointView(window, clock);
+				gui.MemoryView(window);
+				gui.DebuggerView(window);
+
+				bool wopen = true;
+				uint id = ppu.emusprite.Texture.NativeHandle;
+				ImGuiWindowFlags wflags = ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoScrollbar |
+										  ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoCollapse;
+
+				if (ImGui.Begin("Nes Sharp", ref wopen, wflags))
+				{
+					ImGui.SetWindowPos(new ImVec2(0, 25));
+					ImGui.SetWindowSize(new ImVec2(512, 480));
+					ImGui.Image((IntPtr)id, new ImVec2(512, 464));
+				}
+
+				GuiImpl.Render(window);
+				window.Display();
+			}
+		}
+
+		private void SetAppStyle()
+		{
+			ImGui.StyleColorsLight();
+		}
+
+		private void Initialize(RenderWindow window, string gamename)
 		{
 			ppu = new Ppu(this, window);
-			cpu = new Cpu(this);
+			cpu = new Cpu(this, gamename);
 			control = new Controls();
 			tracer = new Tracer(this);
-			gui = new Gui(this);
 		}
 	}
 }

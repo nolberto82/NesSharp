@@ -10,15 +10,16 @@ namespace NesSharp
 	{
 		public int Offset;
 		public Type BpType;
-
+		public bool IsBP;
 
 		public enum Type
 		{ Execute, Read, Write };
 
-		public Breakpoint(int offset, int bptype)
+		public Breakpoint(int offset, int bptype, bool bp)
 		{
 			Offset = offset;
 			BpType = (Type)bptype;
+			IsBP = bp;
 		}
 	}
 }

@@ -315,35 +315,35 @@ namespace NesSharp
 					strins = $"{opnames[op][0]}";
 					break;
 				case "IMME":
-					b1 = c.mapper.CpuReadDebug(pc + 1);
+					b1 = c.mapper.ram[pc + 1];
 					strpc = $"{pc:X4}:{op:X2} {b1:X2}";
 					strins = $"{opnames[op][0]} #${b1:X2}";
 					break;
 				case "ZERP":
-					b1 = c.mapper.CpuReadDebug(pc + 1);
-					v = c.mapper.CpuReadDebug(b1);
+					b1 = c.mapper.ram[pc + 1];
+					v = c.mapper.ram[b1];
 					strpc = $"{pc:X4}:{op:X2} {b1:X2}";
 					strins = $"{opnames[op][0]} ${b1:X4} = #${v:X2}";
 					break;
 				case "ZERX":
-					b0 = c.mapper.CpuReadDebug(pc + 1);
+					b0 = c.mapper.ram[pc + 1];
 					b1 = (u8)(b0 + x);
-					v = c.mapper.CpuReadDebug(b1);
+					v = c.mapper.ram[b1];
 					strpc = $"{pc:X4}:{op:X2} {b1:X2}";
 					strins = $"{opnames[op][0]} ${b0:X4},X @ ${b1:X4} = #${v:X2}";
 					break;
 				case "ZERY":
-					b0 = c.mapper.CpuReadDebug(pc + 1);
+					b0 = c.mapper.ram[pc + 1];
 					b1 = (u8)(b0 + y);
-					v = c.mapper.CpuReadDebug(b1);
+					v = c.mapper.ram[b1];
 					strpc = $"{pc:X4}:{op:X2} {b1:X2}";
 					strins = $"{opnames[op][0]} ${b0:X4},Y @ ${b1:X4} = #${v:X2}";
 					break;
 				case "ABSO":
-					b1 = c.mapper.CpuReadDebug(pc + 1);
-					b2 = c.mapper.CpuReadDebug(pc + 2);
+					b1 = c.mapper.ram[pc + 1];
+					b2 = c.mapper.ram[pc + 2];
 					addr = (b2 << 8) | b1;
-					v = c.mapper.CpuReadDebug(addr);
+					v = c.mapper.ram[addr];
 
 					if (op != 0x4c && op != 0x20)
 					{
@@ -358,45 +358,45 @@ namespace NesSharp
 
 					break;
 				case "ABSX":
-					b1 = c.mapper.CpuReadDebug(pc + 1);
-					b2 = c.mapper.CpuReadDebug(pc + 2);
-					addr = ((b2 << 8) | b1) + x;
-					v = c.mapper.CpuReadDebug(addr);
+					b1 = c.mapper.ram[pc + 1];
+					b2 = c.mapper.ram[pc + 2];
+					addr = (((b2 << 8) | b1) + x) & 0xffff;
+					v = c.mapper.ram[addr];
 					strpc = $"{pc:X4}:{op:X2} {b1:X2} {b2:X2}";
 					strins = $"{opnames[op][0]} ${addr - x:X4},X @ ${addr:X4} = #${v:X2}";
 					break;
 				case "ABSY":
-					b1 = c.mapper.CpuReadDebug(pc + 1);
-					b2 = c.mapper.CpuReadDebug(pc + 2);
+					b1 = c.mapper.ram[pc + 1];
+					b2 = c.mapper.ram[pc + 2];
 					addr = (((b2 << 8) | b1) + y) & 0xffff;
-					v = c.mapper.CpuReadDebug(addr);
+					v = c.mapper.ram[addr];
 					strpc = $"{pc:X4}:{op:X2} {b1:X2} {b2:X2}";
 					strins = $"{opnames[op][0]} ${addr - y:X4},Y @ ${addr:X4} = #${v:X2}";
 					break;
 				case "INDX":
-					b0 = c.mapper.CpuReadDebug(pc + 1);
+					b0 = c.mapper.ram[pc + 1];
 					b1 = (u8)(b0 + x);
-					b2 = c.mapper.CpuReadDebug(b1);
-					b3 = c.mapper.CpuReadDebug((u8)(b1 + 1));
+					b2 = c.mapper.ram[b1];
+					b3 = c.mapper.ram[(u8)(b1 + 1)];
 					addr = ((b3 << 8) | b2);
-					v = c.mapper.CpuReadDebug(addr);
+					v = c.mapper.ram[addr];
 					strpc = $"{pc:X4}:{op:X2} {b0:X2}";
 					strins = $"{opnames[op][0]} (${b0:X2},X) @ ${(u8)(b0 + x):X2} = #${v:X2}";
 					//str1 += $"${pc:X4}:{op:X2} {b0,-11:X2} {opnames[op][0]} (${b0:X2},X) @ {(u8)(b0 + x):X2} = {addr:X4} = {v,-42:X2}";
 					break;
 				case "INDY":
-					b0 = c.mapper.CpuReadDebug(pc + 1);
+					b0 = c.mapper.ram[pc + 1];
 					b1 = (u8)(b0);
-					b2 = c.mapper.CpuReadDebug(b1);
-					b3 = c.mapper.CpuReadDebug((u8)(b1 + 1));
+					b2 = c.mapper.ram[b1];
+					b3 = c.mapper.ram[(u8)(b1 + 1)];
 					addr = (((b3 << 8) | b2) + y) & 0xffff;
-					v = c.mapper.CpuReadDebug(addr);
+					v = c.mapper.ram[addr];
 					strpc = $"{pc:X4}:{op:X2} {b0:X2}";
 					strins = $"{opnames[op][0]} (${b0:X2}),Y @ ${addr:X4} = #${v:X2}";
 					break;
 				case "INDI":
-					b0 = c.mapper.CpuReadDebug(pc + 1);
-					b1 = c.mapper.CpuReadDebug(pc + 2);
+					b0 = c.mapper.ram[pc + 1];
+					b1 = c.mapper.ram[pc + 2];
 					addr = ((b1 << 8) | b0);
 
 					if (b0 == 0xff)
@@ -405,7 +405,7 @@ namespace NesSharp
 					}
 					else
 					{
-						v = c.mapper.CpuReadDebug(addr) | (u8)c.mapper.CpuReadDebug((addr + 1)) << 8;
+						v = c.mapper.ram[addr] | (u8)c.mapper.ram[(addr + 1)] << 8;
 					}
 
 					strpc = $"{pc:X4}:{op:X2} {b0:X2} {b1:X2}";
@@ -413,7 +413,7 @@ namespace NesSharp
 					//str1 += $"${pc:X4}:{op:X2} {b0:X2} {b1,-11:X2} {opnames[op][0]} (${addr:X4}) = {v,-42:X4}";
 					break;
 				case "RELA":
-					b1 = c.mapper.CpuReadDebug(pc + 1);
+					b1 = c.mapper.ram[pc + 1];
 					addr = pc + (s8)(b1) + 2;
 					strpc = $"{pc:X4}:{op:X2} {b1:X2}";
 					strins = $"{opnames[op][0]} ${addr:X2}";

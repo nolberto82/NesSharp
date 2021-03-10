@@ -84,21 +84,15 @@ namespace NesSharp
 		public bool Fv { get => fv; set => fv = value; }
 		public bool Fn { get => fn; set => fn = value; }
 
-		public Cpu(Main core)
+		public Cpu(Main core, string gamename)
 		{
 			c = core;
 
 			breakpoints = new List<Breakpoint>();
 
-			//ppucycles = cycles * 3;
-			//trace = true;
-		}
-
-		public bool LoadRom(string gamename)
-		{
 			c.mapper = new Mapper(c, gamename);
 			if (c.mapper.ram == null)
-				return false;
+				return;
 			Pc = (c.mapper.CpuRead(0xfffd) << 8) | c.mapper.CpuRead(0xfffc);
 
 			Sp = 0xfd;
@@ -106,7 +100,6 @@ namespace NesSharp
 			Fi = true;
 			cycles = 0;
 			totalcycles = 0;
-			return running = true;
 		}
 
 		public void StepOne()
@@ -129,6 +122,7 @@ namespace NesSharp
 						return;
 					}
 				}
+				Buffer.BlockCopy(c.mapper.ram, 0x0800, c.mapper.ram, 0x3000, 8);
 			}
 
 			ppucycles -= SCANCYCLES;
@@ -137,10 +131,10 @@ namespace NesSharp
 		private void Execute()
 		{
 			if (pc > 0xffff)
-				Environment.Exit(0); ;
+				Environment.Exit(0);
 			op = c.mapper.ram[Pc++];
 
-			if (trace)
+			if (c.gui.tracelog)
 			{
 				int opsize;
 				SetProcessorStatus();
