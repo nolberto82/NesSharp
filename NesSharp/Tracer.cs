@@ -10,11 +10,11 @@ namespace NesSharp
 	{
 		public Dictionary<int, string[]> opnames;
 		public List<string> tracelines;
-		private Main c;
+		private Nes c;
 
-		public Tracer(Main core)
+		public Tracer()
 		{
-			c = core;
+			c = Nes.Instance;
 			tracelines = new List<string>();
 			opnames = new Dictionary<int, string[]>();
 

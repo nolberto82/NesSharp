@@ -4,12 +4,13 @@ using System.Linq;
 using u8 = System.Byte;
 using s8 = System.SByte;
 using System.Collections.Generic;
+using NesSharp.Mappers;
 
 namespace NesSharp
 {
 	public class Cpu
 	{
-		private Main c;
+		private Nes c;
 
 		private u8 a;
 		private u8 y;
@@ -86,9 +87,9 @@ namespace NesSharp
 		public bool Fv { get => fv; set => fv = value; }
 		public bool Fn { get => fn; set => fn = value; }
 
-		public Cpu(Main core)
+		public Cpu()
 		{
-			c = core;
+			c = Nes.Instance;
 			breakpoints = new List<Breakpoint>();
 		}
 

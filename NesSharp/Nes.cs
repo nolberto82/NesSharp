@@ -13,10 +13,11 @@ using ImVec4 = System.Numerics.Vector4;
 using u8 = System.Byte;
 using System.Linq;
 using NesSharp.UI;
+using NesSharp.Mappers;
 
 namespace NesSharp
 {
-	public class Main
+	public class Nes
 	{
 		public Mapper mapper;
 		public Cpu cpu;
@@ -27,6 +28,17 @@ namespace NesSharp
 		public Clock clock = new Clock();
 
 		public int emustate;
+
+		private static readonly Lazy<Nes> lazy = new Lazy<Nes>(() => new Nes());
+		private Nes () { }
+
+		public static Nes Instance
+		{
+			get
+			{
+				return lazy.Value;
+			}
+		}
 
 		public void Run()
 		{
@@ -40,7 +52,9 @@ namespace NesSharp
 
 			emustate = State.Reset;
 
-			gui = new Gui(this);
+			gui = new Gui();
+
+			Initialize(window);
 
 			gui.filemanager = true;
 
@@ -102,7 +116,7 @@ namespace NesSharp
 			gui.MainMenu();
 			gui.LoadFile(window, clock);
 			if (emustate == State.Running)
-				Initialize(window);
+				Reset();
 
 			GuiImpl.Render(window);
 			window.Display();
@@ -118,7 +132,7 @@ namespace NesSharp
 				if (gui.filemanager)
 				{
 					gui.LoadFile(window, clock);
-					Initialize(window);
+					Reset();
 					return;
 				}
 
@@ -161,19 +175,35 @@ namespace NesSharp
 
 		private void Initialize(RenderWindow window)
 		{
-			ppu = new Ppu(this, window);
-			cpu = new Cpu(this);
-			mapper = new Mapper(this);
+			ppu = new Ppu(window);
+			cpu = new Cpu();
+			//mapper = new Mapper(true);
 			control = new Controls();
-			tracer = new Tracer(this);
-			Reset();
+			tracer = new Tracer();
+			//Reset();
 		}
 
 		private void Reset()
 		{
+			//mapper.LoadRom();
+			SetupMapper();
 			cpu.Reset();
 			ppu.Reset();
 			gui.resetemu = false;
+		}
+
+		private void SetupMapper()
+		{
+			byte[] rom = File.ReadAllBytes(gui.gamename);
+			switch ((rom[6] & 0xf0) >> 4)
+			{
+				case 0:
+					mapper = new Mapper000(rom);
+					break;
+				case 2:
+					mapper = new Mapper002(rom);
+					break;
+			}
 		}
 	}
 }

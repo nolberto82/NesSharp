@@ -20,7 +20,7 @@ namespace NesSharp
 		public u8 ppuoamdata;
 		private bool background8px;
 		private bool backgroundrender;
-		private Main c;
+		private Nes c;
 		private Image emuimg;
 		public Sprite emusprite;
 		public Texture emutex;
@@ -54,9 +54,9 @@ namespace NesSharp
 		public ulong frame;
 		private bool ppuready;
 
-		public Ppu(Main core, RenderWindow w)
+		public Ppu(RenderWindow w)
 		{
-			c = core;
+			c = Nes.Instance;
 			window = w;
 
 			if (palettes == null)
@@ -540,7 +540,6 @@ namespace NesSharp
 			int patternaddr = (ppuctrl & 0x08) > 0 ? 0x1000 : 0x0000;
 			int paladdr = 0x3f10;
 			int left8 = (ppuctrl & 0x04) > 0 ? 1 : 0;
-			int spritecount = 0;
 
 			u8 x, y;
 			int tileid, att, i;
@@ -549,25 +548,10 @@ namespace NesSharp
 			{
 				i = j % 64;
 
-				if (i == 8)
-				{
-					int yo = 0;
-				}
-
-				//if (ppuoamdma == 0 && oammem != null && oammem.Count == 256)
-				//{
-					y = (u8)(c.mapper.oam[i * 4 + 0] + 1);
-					tileid = c.mapper.oam[i * 4 + 1];
-					att = c.mapper.oam[i * 4 + 2];
-					x = c.mapper.oam[i * 4 + 3];// & 0xff + left8;
-				//}
-				//else
-				//{
-				//	y = c.mapper.ram[oamaddr | i * 4 + 0];
-				//	tileid = c.mapper.ram[oamaddr | i * 4 + 1];
-				//	att = c.mapper.ram[oamaddr | i * 4 + 2];
-				//	x = c.mapper.ram[oamaddr | i * 4 + 3];
-				//}
+				y = (u8)(c.mapper.oam[i * 4 + 0]);
+				tileid = c.mapper.oam[i * 4 + 1];
+				att = c.mapper.oam[i * 4 + 2];
+				x = c.mapper.oam[i * 4 + 3];// & 0xff + left8;
 
 				int sz = 8;
 				if (spritesize)
@@ -576,8 +560,8 @@ namespace NesSharp
 				if (((att & frontback) > 0) && (y < ppu_scanline || (y + sz) > ppu_scanline))
 					continue;
 
-				if (y >= 0xef)
-					continue;
+				//if (y >= 0xef)
+				//	continue;
 
 				bool flipH = (att & 0x40) > 0;
 				bool flipV = (att & 0x80) > 0;
@@ -626,9 +610,9 @@ namespace NesSharp
 						if (xp < 0 || xp >= 255 || yp < 0 || yp >= 240)
 							break;
 
-						byte alpha = sp0data[256 * (y + row) * 4 + (x + col) * 4 + 3];
-						if (alpha == 0 && i == 0)
-							SetSpriteZero();
+						//byte alpha = sp0data[256 * (y + row) * 4 + (x + col) * 4 + 3];
+						//if (alpha == 0 && i == 0)
+						//	SetSpriteZero();
 
 						if (palindex != 0)
 						{

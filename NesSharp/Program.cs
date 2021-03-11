@@ -6,8 +6,7 @@ namespace NesSharp
     {
         static void Main(string[] args)
         {
-            Main core = new Main();
-            core.Run();
+            Nes.Instance.Run();
         }
     }
 }
