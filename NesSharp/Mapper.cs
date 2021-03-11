@@ -4,35 +4,35 @@ using System.IO;
 using System.Text;
 using u8 = System.Byte;
 using u16 = System.UInt16;
+using System.Linq;
 
 namespace NesSharp
 {
-    public class Mapper
-    {
+	public class Mapper
+	{
 		public byte[] ram;
 		public byte[] rom;
 		public byte[] vram;
+		public byte[] oam;
 		private Main c;
 
-		public Mapper(Main core, string gamename)
-        {
-            c = core;
+		public Mapper(Main core)
+		{
+			c = core;
 
-            if (!File.Exists(gamename))
-                Environment.Exit(1);
+			rom = File.ReadAllBytes(c.gui.gamename);
 
-            rom = File.ReadAllBytes(gamename);
+			if (Encoding.ASCII.GetString(rom, 0, 3) != "NES")
+			{
+				return;
+			}
 
-            if (Encoding.ASCII.GetString(rom, 0, 3) != "NES")
-            {
-                return;
-            }
+			ram = new byte[0x10000];
+			vram = new byte[0x4000];
+			oam = new byte[0x100];
 
-            ram = new byte[0x10000];
-            vram = new byte[0x4000];
-
-            SetUpMapper();
-        }
+			SetUpMapper();
+		}
 
 		public byte CpuRead(int addr)
 		{
@@ -83,6 +83,10 @@ namespace NesSharp
 					break;
 				case 0x4014:
 					c.ppu.ppuoamdma = v;
+					int oamaddr = v << 8;
+					for (int i = 0; i < 256; i++)
+						oam[i] = ram[oamaddr + i];
+					c.cpu.ppucycles += 513;
 					break;
 				case 0x4016:
 					c.control.ControlWrite(v);
@@ -90,6 +94,15 @@ namespace NesSharp
 				default:
 					ram[addr] = v;
 					break;
+			}
+
+			if (c.cpu.breakpoints.Count > 0)
+			{
+				var res = c.cpu.breakpoints.FirstOrDefault(b => b.Offset == addr);
+				if (res != null && res.BpType == Breakpoint.Type.Write)
+				{
+					c.cpu.Breakmode = true;
+				}
 			}
 		}
 
@@ -101,7 +114,7 @@ namespace NesSharp
 		public void PpuWrite(int addr, byte v)
 		{
 			for (int i = 0; i < 32; i++)
-				Buffer.BlockCopy(vram, 0x3f10, vram,0x3f00 + i * 0x4,1);
+				Buffer.BlockCopy(vram, 0x3f10, vram, 0x3f00 + i * 0x4, 1);
 
 			for (int i = 0; i < 7; i++)
 				Buffer.BlockCopy(vram, 0x3f00, vram, 0x3f00 + i * 0x20, 1);
@@ -117,7 +130,7 @@ namespace NesSharp
 			int chrrom = chrbanks * 0x2000;
 			int prgsize = prgrom / prgbanks;
 			int chrsize = chrrom > 0 ? chrrom / chrbanks : 0;
-			int mappernum = (rom[6] & 0xf0)>> 4;
+			int mappernum = (rom[6] & 0xf0) >> 4;
 			c.ppu.mirrornametable = 0;
 
 			if ((rom[6] & 0x08) > 0)

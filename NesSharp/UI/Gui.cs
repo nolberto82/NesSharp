@@ -23,8 +23,11 @@ namespace NesSharp.UI
 		private bool jumpto;
 		public bool tracelog;
 		private int index;
+		private int bpindex;
 		private bool bpwindow;
+		private bool br, bw, be;
 		private MemoryEditor mem;
+		public string gamename;
 
 		public Gui(Main core)
 		{
@@ -33,25 +36,7 @@ namespace NesSharp.UI
 			inputtext = "";
 		}
 
-		public void BreakpointView(RenderWindow window, Clock clock)
-		{
-			ImGuiWindowFlags wflags = ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoScrollbar |
-			  ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoCollapse;
-
-			if (ImGui.Begin("Breakpoints", ref bpwindow, wflags))
-			{
-				ImGui.SetWindowPos(new ImVec2(517, 30 + window.Size.Y / 2));
-				ImGui.SetWindowSize(new ImVec2(400, window.Size.Y / 2 - 40));
-
-				for (int i = 0; i < 3; i++)
-					SetCheckBoxBP("" + i, 1, 20, i);
-
-				ImGui.End();
-			}
-
-		}
-
-		public void DebuggerView(RenderWindow window)
+		public void DebuggerView(RenderWindow window, Clock clock)
 		{
 			if (c.cpu == null)
 				return;
@@ -63,7 +48,7 @@ namespace NesSharp.UI
 			if (ImGui.Begin("Debugger", ref wopen, wflags))
 			{
 				ImGui.SetWindowPos(new ImVec2(517, 25));
-				ImGui.SetWindowSize(new ImVec2(400, window.Size.Y / 2));
+				ImGui.SetWindowSize(new ImVec2(400, window.Size.Y - 35));
 
 				if (ImGui.BeginChild("Buttons"))
 				{
@@ -71,7 +56,8 @@ namespace NesSharp.UI
 					{
 						jumpto = false;
 						c.cpu.Breakmode = false;
-						c.state = State.Running;
+						c.emustate = State.Running;
+						c.cpu.StepOne();
 						return;
 					}
 
@@ -86,12 +72,11 @@ namespace NesSharp.UI
 							c.cpu.ppucycles -= 341;
 						}
 
-						if (c.state == State.Running)
-							c.state = State.Debug;
+						if (c.emustate == State.Running)
+							c.emustate = State.Debug;
 					}
 
 					ImGui.SameLine();
-
 
 					if (ImGui.Button("Goto"))
 						jumpto = true;
@@ -114,32 +99,104 @@ namespace NesSharp.UI
 
 				if (ImGui.BeginChild(""))
 				{
-					ImGui.Separator();
 					ShowRegisters();
+
 					ImGui.Spacing();
 					ImGui.Separator();
+
 					ShowFlags();
+
 					ImGui.Spacing();
 					ImGui.Separator();
+
+					SetInputText("Cycles:", c.cpu.ppucycles.ToString(), 20, 30, 10);
+
+					ImGui.SameLine(0,1);
+
+					SetInputText("Total Cycles:", c.cpu.totalcycles.ToString(), 20, 70, 10);
+
+					ImGui.SameLine(0, 1);
+
+					SetInputText("Scanline:", c.ppu.ppu_scanline.ToString(), 20, 30, 10);
+
+					ImGui.Spacing();
+					ImGui.Separator();
+
+					string[] bpitems = c.cpu.breakpoints.Select(k => k.BpString).ToArray();
+
+					ImGui.Text("Breakpoints");
+
+					ImGui.PushItemWidth(-1);
+					if (ImGui.ListBox("##listbp", ref bpindex, bpitems, bpitems.Length, 6))
+					{
+						if (c.cpu.breakpoints.Count > 0)
+							c.cpu.breakpoints.RemoveAt(bpindex);
+					}
+					ImGui.PopItemWidth();
+
+					int offset = inputtext != "" ? Convert.ToInt32(inputtext, 16) : -1;
+
+					var res = c.cpu.breakpoints.FirstOrDefault(b => b.Offset == offset);
+
+					if (ImGui.Button("Add Breakpoint"))
+					{
+						if (offset > -1)
+						{
+							if (br)
+								c.cpu.breakpoints.Add(new Breakpoint(offset, Breakpoint.Type.Read, true));
+							else if (bw)
+								c.cpu.breakpoints.Add(new Breakpoint(offset, Breakpoint.Type.Write, true));
+							else if (be)
+								c.cpu.breakpoints.Add(new Breakpoint(offset, Breakpoint.Type.Execute, true));
+							else
+								c.cpu.breakpoints.Remove(res);
+						}
+					}
+
+					if (res != null && res.BpType == Breakpoint.Type.Read)
+						br = res.IsBP;
+					else if (res != null && res.BpType == Breakpoint.Type.Write)
+						bw = res.IsBP;
+					else if (res != null && res.BpType == Breakpoint.Type.Execute)
+						be = res.IsBP;
+
+					ImGui.SameLine();
+
+					ImGui.PushItemWidth(36);
+					ImGui.InputText("##bpinput", ref inputtext, 4, ImGuiInputTextFlags.CharsHexadecimal | ImGuiInputTextFlags.CharsUppercase);
+					ImGui.PopItemWidth();
+
+					ImGui.SameLine();
+					ImGui.Checkbox("Read", ref br);
+					ImGui.SameLine();
+					ImGui.Checkbox("Write", ref bw);
+					ImGui.SameLine();
+					ImGui.Checkbox("Exec", ref be);
+
+					ImGui.EndChild();
 				}
 
-				int lines = 500;// (int)Math.Min(ImGui.GetContentRegionAvail().Y / ImGui.GetTextLineHeightWithSpacing(), 1000);
-				int Pc = (jumpto && inputtext.Length == 4 ? Convert.ToInt32(inputtext, 16) : c.cpu.Pc);// - lines / 2;
+				ImGui.Spacing();
+				ImGui.Spacing();
+				ImGui.Separator();
 
 				if (ImGui.BeginChild(""))
 				{
+					int lines = (int)Math.Min(ImGui.GetContentRegionAvail().Y / ImGui.GetTextLineHeightWithSpacing(), 1000);
+					int Pc = (jumpto && inputtext.Length > 0 ? Convert.ToInt32(inputtext, 16) : c.cpu.Pc) - 9;// - lines;
+
 					for (int i = 0; i < lines; i++)
 					{
 						int opsize;
 						u8 Op = c.mapper.ram[Pc];
 						string line = c.tracer.DisassembleFCEUXFormat(Op, Pc, c.cpu.A, c.cpu.X, c.cpu.Y, c.cpu.Ps, c.cpu.Sp, out opsize, 0, true);
 
-						if (c.state == State.Debug)
+						if (c.emustate == State.Debug)
 						{
 							var res = c.cpu.breakpoints.FirstOrDefault(b => b.Offset == Pc);
 							bool v = res != null ? true : false;
 
-							if (ImGui.Checkbox("##" + i, ref v))
+							if (ImGui.Checkbox("##bpchk" + i, ref v))
 							{
 								if (v)
 									c.cpu.breakpoints.Add(new Breakpoint(Pc, 0, true));
@@ -186,12 +243,12 @@ namespace NesSharp.UI
 					mem.Draw(ramsel[index], c.mapper.ram, c.mapper.ram.Length);
 				else
 					mem.Draw(ramsel[index], c.mapper.vram, c.mapper.vram.Length);
+				ImGui.End();
 			}
 		}
 
-		public string LoadFile(RenderWindow window, Clock clock)
+		public void LoadFile(RenderWindow window, Clock clock)
 		{
-			string filename = "";
 			while (filemanager && window.IsOpen)
 			{
 				window.DispatchEvents();
@@ -213,9 +270,8 @@ namespace NesSharp.UI
 
 						if (ImGui.ListBox("##Roms", ref romselectindex, files, files.Length, 20))
 						{
-							filename = folder + "/" + files[romselectindex];
-
-							c.state = State.Running;
+							gamename = folder + "/" + files[romselectindex];
+							c.emustate = State.Running;
 							filemanager = false;
 						}
 
@@ -227,7 +283,6 @@ namespace NesSharp.UI
 				GuiImpl.Render(window);
 				window.Display();
 			}
-			return filename;
 		}
 
 		public float MainMenu()
@@ -235,7 +290,7 @@ namespace NesSharp.UI
 			float wsize = 0;
 			if (ImGui.BeginMainMenuBar())
 			{
-				wsize = ImGui.GetWindowHeight(); ;
+				wsize = ImGui.GetWindowHeight();
 				if (ImGui.BeginMenu("File"))
 				{
 					filemanager = ImGui.MenuItem("Open");
@@ -244,18 +299,28 @@ namespace NesSharp.UI
 					ImGui.EndMenu();
 				}
 
-				if (c.state == State.Running)
+				if (ImGui.BeginMenu("Reset"))
+				{
+					resetemu = true;
+					c.emustate = State.Reset;
+					//filemanager = ImGui.MenuItem("Open");
+					//if (ImGui.MenuItem("Reset") && c.cpu != null)
+					///	c.showram = true;
+					ImGui.EndMenu();
+				}
+
+				if (c.emustate == State.Running)
 				{
 					if (ImGui.BeginMenu("Debug"))
 					{
 						if (ImGui.MenuItem("Debugger"))
-							c.state = State.Debug;
+							c.emustate = State.Debug;
 						if (ImGui.MenuItem("Memory"))
 							showram = true;
 						ImGui.EndMenu();
 					}
 
-					if (ImGui.BeginMenu("Tracer") && c.state == State.Running)
+					if (ImGui.BeginMenu("Tracer") && c.emustate == State.Running)
 					{
 						if (ImGui.MenuItem("Trace") && c.cpu != null)
 							c.cpu.trace = !c.cpu.trace;
@@ -282,8 +347,31 @@ namespace NesSharp.UI
 			ImGui.SameLine(0, 1);
 
 			ImGui.PushItemWidth(width);
+
 			if (ImGui.Checkbox("##" + inputspace.ToString(), ref check))
+			{
 				tracelog = check;
+				if (c.tracer.tracelines.Count > 1)
+				{
+					File.WriteAllLines("tracenes.log", c.tracer.tracelines.ToArray());
+					c.tracer.tracelines.Clear();
+					c.tracer.tracelines.Add("FCEUX 2.2.3 - Trace Log File");
+				}
+
+			}
+
+			ImGui.PopItemWidth();
+		}
+
+		private void SetInputText(string labeltext, string inputtext, uint size, int width, int inputspace)
+		{
+			ImGui.PushItemWidth(1);
+			ImGui.LabelText(labeltext, "");
+			ImGui.PopItemWidth();
+			ImGui.SameLine(0, 1);
+
+			ImGui.PushItemWidth(width);
+			ImGui.InputText("##" + inputspace.ToString(), ref inputtext, size);
 			ImGui.PopItemWidth();
 		}
 

@@ -26,7 +26,7 @@ namespace NesSharp
 		public Gui gui;
 		public Clock clock = new Clock();
 
-		public int state;
+		public int emustate;
 
 		public void Run()
 		{
@@ -38,7 +38,7 @@ namespace NesSharp
 
 			window.SetFramerateLimit(60);
 
-			state = State.Reset;
+			emustate = State.Reset;
 
 			gui = new Gui(this);
 
@@ -53,32 +53,25 @@ namespace NesSharp
 				if (!window.IsOpen)
 					break;
 
-				switch (state)
+				switch (emustate)
 				{
 					case State.Running:
 						cpu.Step();
-						ppu.RenderScanline();
+						if (!cpu.Breakmode)
+							ppu.RenderScanline();
 
 						if (cpu.Breakmode)
-							state = State.Debug;
+							emustate = State.Debug;
 
 						UpdateScreen(window);
 						break;
 					case State.Reset:
-						GuiImpl.Update(window, clock.Restart());
-
-						gui.MainMenu();
-						Initialize(window, gui.LoadFile(window, clock));
-
-						GuiImpl.Render(window);
-						window.Display();
+						UpdateReset(window);
 						break;
 					case State.Debug:
 						GuiImpl.Update(window, clock.Restart());
 
-						gui.MainMenu();
-						gui.MemoryView(window);
-						gui.DebuggerView(window);
+						RenderFrame(window);
 
 						GuiImpl.Render(window);
 						window.Display();
@@ -88,9 +81,6 @@ namespace NesSharp
 
 			if (cpu != null && mapper != null && mapper.ram != null)
 			{
-				if (tracer.tracelines.Count > 0)
-					File.WriteAllLines("tracenes.log", tracer.tracelines.ToArray());
-
 				File.WriteAllBytes("ram.bin", mapper.ram);
 				File.WriteAllBytes("vram.bin", mapper.vram);
 			}
@@ -98,59 +88,92 @@ namespace NesSharp
 			GuiImpl.Shutdown();
 		}
 
+		private void UpdateReset(RenderWindow window)
+		{
+			GuiImpl.Update(window, clock.Restart());
+
+			if (gui.resetemu)
+			{
+				Reset();
+				emustate = State.Running;
+				return;
+			}
+
+			gui.MainMenu();
+			gui.LoadFile(window, clock);
+			if (emustate == State.Running)
+				Initialize(window);
+
+			GuiImpl.Render(window);
+			window.Display();
+		}
+
 		private void UpdateScreen(RenderWindow window)
 		{
-			if (ppu.ppu_scanline == 261)
+			if (ppu.ppu_scanline == 262)
 			{
 				window.Clear();
 				GuiImpl.Update(window, clock.Restart());
 
-				ppu.emutex.Update(ppu.gfxdata);
-				ppu.emusprite.Texture = ppu.emutex;
-
-				float wsize = gui.MainMenu();
-
-				if (gui.resetemu)
-					Initialize(window,"");
-
 				if (gui.filemanager)
 				{
-					Initialize(window, gui.LoadFile(window, clock));
+					gui.LoadFile(window, clock);
+					Initialize(window);
 					return;
 				}
 
-				gui.BreakpointView(window, clock);
-				gui.MemoryView(window);
-				gui.DebuggerView(window);
-
-				bool wopen = true;
-				uint id = ppu.emusprite.Texture.NativeHandle;
-				ImGuiWindowFlags wflags = ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoScrollbar |
-										  ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoCollapse;
-
-				if (ImGui.Begin("Nes Sharp", ref wopen, wflags))
-				{
-					ImGui.SetWindowPos(new ImVec2(0, 25));
-					ImGui.SetWindowSize(new ImVec2(512, 480));
-					ImGui.Image((IntPtr)id, new ImVec2(512, 464));
-				}
+				RenderFrame(window);
 
 				GuiImpl.Render(window);
 				window.Display();
 			}
 		}
 
-		private void SetAppStyle()
+		private void RenderFrame(RenderWindow window)
 		{
-			ImGui.StyleColorsLight();
+			bool wopen = true;
+
+
+			ImGuiWindowFlags wflags = ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoScrollbar |
+									  ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoCollapse;
+
+			gui.MainMenu();
+			gui.DebuggerView(window, clock);
+			gui.MemoryView(window);
+
+			ppu.emutex.Update(ppu.gfxdata);
+			ppu.emusprite.Texture = ppu.emutex;
+
+			uint id = ppu.emusprite.Texture.NativeHandle;
+
+			if (ImGui.Begin("Nes Sharp", ref wopen, wflags))
+			{
+				ImGui.SetWindowPos(new ImVec2(0, 25));
+				ImGui.SetWindowSize(new ImVec2(512, 480));
+				ImGui.Image((IntPtr)id, new ImVec2(512, 464));
+			}
 		}
 
-		private void Initialize(RenderWindow window, string gamename)
+		private void SetAppStyle()
+		{
+			//ImGui.StyleColorsLight();
+		}
+
+		private void Initialize(RenderWindow window)
 		{
 			ppu = new Ppu(this, window);
-			cpu = new Cpu(this, gamename);
+			cpu = new Cpu(this);
+			mapper = new Mapper(this);
 			control = new Controls();
 			tracer = new Tracer(this);
+			Reset();
+		}
+
+		private void Reset()
+		{
+			cpu.Reset();
+			ppu.Reset();
+			gui.resetemu = false;
 		}
 	}
 }

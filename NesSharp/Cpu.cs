@@ -9,7 +9,7 @@ namespace NesSharp
 {
 	public class Cpu
 	{
-		Main c;
+		private Main c;
 
 		private u8 a;
 		private u8 y;
@@ -48,6 +48,8 @@ namespace NesSharp
 
 		public bool frameready;
 
+		public string gamename;
+
 		int[] cyclestable =
 		{
 			7,6,0,0,0,3,5,0,3,2,2,0,0,4,6,0,//00
@@ -84,21 +86,21 @@ namespace NesSharp
 		public bool Fv { get => fv; set => fv = value; }
 		public bool Fn { get => fn; set => fn = value; }
 
-		public Cpu(Main core, string gamename)
+		public Cpu(Main core)
 		{
 			c = core;
-
 			breakpoints = new List<Breakpoint>();
+		}
 
-			c.mapper = new Mapper(c, gamename);
-			if (c.mapper.ram == null)
-				return;
+		public void Reset()
+		{
 			Pc = (c.mapper.CpuRead(0xfffd) << 8) | c.mapper.CpuRead(0xfffc);
 
 			Sp = 0xfd;
 			Ps = 0x24;
 			Fi = true;
 			cycles = 0;
+			ppucycles = 0;
 			totalcycles = 0;
 		}
 
@@ -111,17 +113,21 @@ namespace NesSharp
 		{
 			while (ppucycles < SCANCYCLES)
 			{
-				Execute();
-
 				if (breakpoints.Count > 0)
 				{
 					var res = breakpoints.FirstOrDefault(b => b.Offset == Pc);
 					if (res != null && res.BpType == Breakpoint.Type.Execute)
 					{
-						Breakmode = true;
+						breakmode = true;
 						return;
 					}
 				}
+
+				if (breakmode)
+					return;
+
+				Execute();
+
 				Buffer.BlockCopy(c.mapper.ram, 0x0800, c.mapper.ram, 0x3000, 8);
 			}
 
@@ -969,7 +975,7 @@ namespace NesSharp
 		private void LSRM(int v)
 		{
 			int r = c.mapper.CpuRead(v);
-			Fc = (A & (1 << 0)) > 0;
+			Fc = (r & (1 << 0)) > 0;
 			r = (u8)((r >> 1) & 0x7f);
 			c.mapper.CpuWrite(v, (u8)r);
 			SetZero(r);

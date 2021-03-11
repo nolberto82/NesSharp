@@ -11,7 +11,7 @@ namespace NesSharp
 	public class Ppu
 	{
 		public byte[] gfxdata;
-		public byte[] bfxdata;
+		public byte[] sp0data;
 		public u8 mirrornametable;
 		public int[] palettes;
 		public int ppu_scanline;
@@ -52,26 +52,12 @@ namespace NesSharp
 		private bool vramaddrincrease;
 		private RenderWindow window;
 		public ulong frame;
-		private VertexArray vgfx;
+		private bool ppuready;
 
 		public Ppu(Main core, RenderWindow w)
 		{
 			c = core;
 			window = w;
-			ppu_scanline = 0;
-			//oamdata = 2;
-
-			gfxdata = new byte[256 * 240 * 4];
-			bfxdata = new byte[256 * 240 * 4];
-			ppugfxdata = new int[2][];
-			ppugfxdata[0] = new int[128 * 128];
-			ppugfxdata[1] = new int[128 * 128];
-
-			nametableimg = new Image(256, 240, new Color(155, 55, 55));
-			emuimg = new Image(256, 240);
-			emutex = new Texture(emuimg);
-			emusprite = new Sprite();
-			vgfx = new VertexArray(PrimitiveType.Quads, 256 * 240);
 
 			if (palettes == null)
 			{
@@ -94,6 +80,24 @@ namespace NesSharp
 			FourScreen,
 			SingleScreen
 		}
+
+		public void Reset()
+		{
+			ppu_scanline = 240;
+			//oamdata = 2;
+
+			gfxdata = new byte[256 * 240 * 4];
+			sp0data = new byte[256 * 240 * 4];
+			ppugfxdata = new int[2][];
+			ppugfxdata[0] = new int[128 * 128];
+			ppugfxdata[1] = new int[128 * 128];
+
+			nametableimg = new Image(256, 240, new Color(155, 55, 55));
+			emuimg = new Image(256, 240);
+			emutex = new Texture(emuimg);
+			emusprite = new Sprite();
+		}
+
 		public void AddrWrite(u8 val) //0x2006
 		{
 			if (!ppu_w)
@@ -188,7 +192,7 @@ namespace NesSharp
 		public void OamDataWrite(u8 val) //0x2004
 		{
 			ppuoamdata = val;
-			oammem.Add(val);
+			//oammem.Add(val);
 		}
 
 		public void RenderScanline()
@@ -511,6 +515,12 @@ namespace NesSharp
 					if (xp < 0 || xp >= 256 || yp < 0 || yp >= 240)
 						continue;
 
+					byte alpha = 0xff;
+					if (colorindex != 0)
+						alpha = 0x00;
+
+					sp0data[(yp * 256 * 4) + (xp * 4) + 3] = alpha;
+
 					int color = palettes[c.mapper.vram[paladdr | colorindex]];
 					gfxdata[(yp * 256 * 4) + (xp * 4) + 0] = (byte)(color >> 0);
 					gfxdata[(yp * 256 * 4) + (xp * 4) + 1] = (byte)(color >> 8);
@@ -539,31 +549,34 @@ namespace NesSharp
 			{
 				i = j % 64;
 
-				if (ppuoamdma == 0 && oammem != null && oammem.Count == 256)
-				{
-					y = (u8)(oammem[i * 4 + 0] + 1);
-					tileid = oammem[i * 4 + 1];
-					att = oammem[i * 4 + 2];
-					x = oammem[i * 4 + 3];// & 0xff + left8;
-				}
-				else
-				{
-					y = (u8)(c.mapper.ram[oamaddr | i * 4 + 0] + 1);
-					tileid = c.mapper.ram[oamaddr | i * 4 + 1];
-					att = c.mapper.ram[oamaddr | i * 4 + 2];
-					x = c.mapper.ram[oamaddr | i * 4 + 3];
-				}
-
 				if (i == 8)
 				{
-					int iu = 0;
+					int yo = 0;
 				}
+
+				//if (ppuoamdma == 0 && oammem != null && oammem.Count == 256)
+				//{
+					y = (u8)(c.mapper.oam[i * 4 + 0] + 1);
+					tileid = c.mapper.oam[i * 4 + 1];
+					att = c.mapper.oam[i * 4 + 2];
+					x = c.mapper.oam[i * 4 + 3];// & 0xff + left8;
+				//}
+				//else
+				//{
+				//	y = c.mapper.ram[oamaddr | i * 4 + 0];
+				//	tileid = c.mapper.ram[oamaddr | i * 4 + 1];
+				//	att = c.mapper.ram[oamaddr | i * 4 + 2];
+				//	x = c.mapper.ram[oamaddr | i * 4 + 3];
+				//}
 
 				int sz = 8;
 				if (spritesize)
 					sz = 16;
 
 				if (((att & frontback) > 0) && (y < ppu_scanline || (y + sz) > ppu_scanline))
+					continue;
+
+				if (y >= 0xef)
 					continue;
 
 				bool flipH = (att & 0x40) > 0;
@@ -613,6 +626,10 @@ namespace NesSharp
 						if (xp < 0 || xp >= 255 || yp < 0 || yp >= 240)
 							break;
 
+						byte alpha = sp0data[256 * (y + row) * 4 + (x + col) * 4 + 3];
+						if (alpha == 0 && i == 0)
+							SetSpriteZero();
+
 						if (palindex != 0)
 						{
 							int color = palettes[c.mapper.vram[paladdr | colorindex]];
@@ -621,7 +638,6 @@ namespace NesSharp
 							gfxdata[256 * (y + row) * 4 + (x + col) * 4 + 2] = (byte)(color >> 16);
 							gfxdata[256 * (y + row) * 4 + (x + col) * 4 + 3] = 255;
 						}
-
 					}
 				}
 			}
@@ -635,6 +651,9 @@ namespace NesSharp
 
 		private void SetVBlank()
 		{
+			if (c.cpu.totalcycles <= 59560)
+				return;
+
 			ppustatus |= 0x80;
 			c.mapper.ram[0x2002] = ppustatus;
 		}

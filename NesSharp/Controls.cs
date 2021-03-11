@@ -68,9 +68,10 @@ namespace NesSharp
 				}
 
 				if (GetKeys(buttonid))
-				{
+				{				
 					val = 0x41;
 				}
+
 				buttonid++;
 			}
 			return val;
