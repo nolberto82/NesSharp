@@ -30,7 +30,7 @@ namespace NesSharp
 		public int emustate;
 
 		private static readonly Lazy<Nes> lazy = new Lazy<Nes>(() => new Nes());
-		private Nes () { }
+		private Nes() { }
 
 		public static Nes Instance
 		{
@@ -45,7 +45,7 @@ namespace NesSharp
 			var window = new RenderWindow(new SFML.Window.VideoMode(256, 240), "Nes Sharp");
 			GuiImpl.Init(window);
 			window.Closed += (s, e) => window.Close();
-			window.Size = new Vector2u(window.Size.X * 6 - 170, window.Size.Y * 4);
+			window.Size = new Vector2u(window.Size.X * 6 - 120, window.Size.Y * 4);
 			window.Position = new Vector2i(20, 20);
 
 			window.SetFramerateLimit(60);
@@ -83,6 +83,7 @@ namespace NesSharp
 						UpdateReset(window);
 						break;
 					case State.Debug:
+						//window.Clear();
 						GuiImpl.Update(window, clock.Restart());
 
 						RenderFrame(window);
@@ -124,7 +125,7 @@ namespace NesSharp
 
 		private void UpdateScreen(RenderWindow window)
 		{
-			if (ppu.ppu_scanline == 262)
+			if (ppu.ppu_scanline == 0)
 			{
 				window.Clear();
 				GuiImpl.Update(window, clock.Restart());
@@ -189,6 +190,7 @@ namespace NesSharp
 			SetupMapper();
 			cpu.Reset();
 			ppu.Reset();
+			gui.Reset();
 			gui.resetemu = false;
 		}
 

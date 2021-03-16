@@ -424,7 +424,9 @@ namespace NesSharp
 					break;
 			}
 
-			if (strins == "")
+			if (!opnames.ContainsKey(op))
+				strins = $"UNDEFINED";
+			else if (strins == "" || opnames[op][0] == "")
 				strins = $"UNDEFINED";
 
 			sb.Append($"${strpc,-14} {strins,-45}");

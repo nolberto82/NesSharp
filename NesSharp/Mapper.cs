@@ -31,6 +31,16 @@ namespace NesSharp
 
 		public virtual byte CpuRead(int addr)
 		{
+
+			if (c.cpu.breakpoints.Count > 0)
+			{
+				var res = c.cpu.breakpoints.FirstOrDefault(b => b.Offset == addr);
+				if (res != null && res.BpType == Breakpoint.Type.Read)
+				{
+					c.cpu.Breakmode = true;
+				}
+			}
+
 			switch (addr)
 			{
 				case 0x2002:
@@ -48,6 +58,15 @@ namespace NesSharp
 
 		public virtual void CpuWrite(int addr, byte v)
 		{
+			if (c.cpu.breakpoints.Count > 0)
+			{
+				var res = c.cpu.breakpoints.FirstOrDefault(b => b.Offset == addr);
+				if (res != null && res.BpType == Breakpoint.Type.Write && res.RType == Breakpoint.RamType.RAM)
+				{
+					c.cpu.Breakmode = true;
+				}
+			}
+
 			switch (addr)
 			{
 				case 0x2000:
@@ -76,23 +95,15 @@ namespace NesSharp
 					int oamaddr = v << 8;
 					for (int i = 0; i < 256; i++)
 						oam[i] = ram[oamaddr + i];
-					c.cpu.ppucycles += 513;
+					c.cpu.cpucycles += 513;
 					break;
 				case 0x4016:
+				case 0x4017:
 					c.control.ControlWrite(v);
 					break;
 				default:
 					ram[addr] = v;
 					break;
-			}
-
-			if (c.cpu.breakpoints.Count > 0)
-			{
-				var res = c.cpu.breakpoints.FirstOrDefault(b => b.Offset == addr);
-				if (res != null && res.BpType == Breakpoint.Type.Write)
-				{
-					c.cpu.Breakmode = true;
-				}
 			}
 		}
 
@@ -103,6 +114,15 @@ namespace NesSharp
 
 		public virtual void PpuWrite(int addr, byte v)
 		{
+			if (c.cpu.breakpoints.Count > 0)
+			{
+				var res = c.cpu.breakpoints.FirstOrDefault(b => b.Offset == addr);
+				if (res != null && res.BpType == Breakpoint.Type.Write && res.RType == Breakpoint.RamType.VRAM)
+				{
+					c.cpu.Breakmode = true;
+				}
+			}
+
 			for (int i = 0; i < 6; i++)
 				Buffer.BlockCopy(vram, 0x3f00, vram, 0x3f20 + i * 32, 32);
 
@@ -117,6 +137,15 @@ namespace NesSharp
 				vram[0x3f10] = v;
 
 			vram[addr & 0x3fff] = v;
+
+			if (c.cpu.breakpoints.Count > 0)
+			{
+				var res = c.cpu.breakpoints.FirstOrDefault(b => b.Offset == addr);
+				if (res != null && res.BpType == Breakpoint.Type.Write)
+				{
+					c.cpu.Breakmode = true;
+				}
+			}
 		}
 
 		public virtual bool InitMemory(byte[] rom)
@@ -146,6 +175,7 @@ namespace NesSharp
 			prgsize = prgrom / prgbanks;
 			chrsize = chrrom > 0 ? chrrom / chrbanks : 0;
 			mappernum = (rom[6] & 0xf0) >> 4;
+			c.ppu.mirrornametable = (u8)(rom[6] & 1);
 		}
 	}
 }

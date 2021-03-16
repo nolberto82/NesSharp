@@ -10,18 +10,31 @@ namespace NesSharp
 	{
 		public int Offset;
 		public Type BpType;
+		public RamType RType;
 		public bool IsBP;
 		public string BpString;
 
 		public enum Type
-		{ Execute, Read, Write };
+		{
+			Execute,
+			Read,
+			Write
+		}
 
-		public Breakpoint(int offset, Type bptype, bool bp)
+		public enum RamType
+		{
+			RAM,
+			VRAM
+		}
+
+		public Breakpoint(int offset, Type bptype, bool rtype = false)
 		{
 			Offset = offset;
 			BpType = bptype;
-			IsBP = bp;
-			BpString = $"{offset:X4}:{BpType}";
+			RType = rtype ? RamType.VRAM : RamType.RAM;
+			IsBP = true;
+			BpString = $"{offset:X4}:{BpType}:{RType}";
+			
 		}
 	}
 }

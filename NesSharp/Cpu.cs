@@ -42,7 +42,7 @@ namespace NesSharp
 		public List<Breakpoint> breakpoints;
 
 		public int cycles;
-		public int ppucycles;
+		public int cpucycles;
 		public int totalcycles;
 
 		private const int SCANCYCLES = 341;
@@ -101,7 +101,7 @@ namespace NesSharp
 			Ps = 0x24;
 			Fi = true;
 			cycles = 0;
-			ppucycles = 0;
+			cpucycles = 0;
 			totalcycles = 0;
 		}
 
@@ -112,7 +112,7 @@ namespace NesSharp
 
 		public void Step()
 		{
-			while (ppucycles < SCANCYCLES)
+			while (cpucycles < SCANCYCLES)
 			{
 				if (breakpoints.Count > 0)
 				{
@@ -132,12 +132,14 @@ namespace NesSharp
 				Buffer.BlockCopy(c.mapper.ram, 0x0800, c.mapper.ram, 0x3000, 8);
 			}
 
-			ppucycles -= SCANCYCLES;
+			cpucycles -= SCANCYCLES;
 		}
 
 		private void Execute()
 		{
-			if (pc > 0xffff)
+			int prevpc = pc;
+
+			if (pc >= 0xffff)
 				Environment.Exit(0);
 			op = c.mapper.ram[Pc++];
 
@@ -364,16 +366,19 @@ namespace NesSharp
 			{
 				cycles++;
 				totalcycles++;
-				ppucycles += 3;
+				cpucycles += 3;
 				pagecrossed = false;
 			}
 
 			cycles += cyclestable[op];
 			totalcycles += cyclestable[op];
-			ppucycles += cyclestable[op] * 3;
+			cpucycles += cyclestable[op] * 3;
 
 			if (c.ppu.ppunmi)
 				NMI();
+
+			//if (Breakmode)
+			//	Pc = prevpc;
 		}
 
 		private void BRK()
@@ -396,7 +401,7 @@ namespace NesSharp
 			c.ppu.ppunmi = false;
 			cycles += 7;
 			totalcycles += 7;
-			ppucycles += 7 * 3;
+			cpucycles += 7 * 3;
 		}
 
 		private void RTI()
@@ -479,7 +484,7 @@ namespace NesSharp
 				Pc = v;
 				cycles++;
 				totalcycles++;
-				ppucycles += 3;
+				cpucycles += 3;
 			}
 			else
 			{
@@ -494,7 +499,7 @@ namespace NesSharp
 				Pc = v;
 				cycles++;
 				totalcycles++;
-				ppucycles += 3;
+				cpucycles += 3;
 			}
 			else
 			{
@@ -509,7 +514,7 @@ namespace NesSharp
 				Pc = v;
 				cycles++;
 				totalcycles++;
-				ppucycles += 3;
+				cpucycles += 3;
 			}
 			else
 			{
@@ -524,7 +529,7 @@ namespace NesSharp
 				Pc = v;
 				cycles++;
 				totalcycles++;
-				ppucycles += 3;
+				cpucycles += 3;
 			}
 			else
 			{
@@ -539,7 +544,7 @@ namespace NesSharp
 				Pc = v;
 				cycles++;
 				totalcycles++;
-				ppucycles += 3;
+				cpucycles += 3;
 			}
 			else
 			{
@@ -554,7 +559,7 @@ namespace NesSharp
 				Pc = v;
 				cycles++;
 				totalcycles++;
-				ppucycles += 3;
+				cpucycles += 3;
 			}
 			else
 			{
@@ -569,7 +574,7 @@ namespace NesSharp
 				Pc = v;
 				cycles++;
 				totalcycles++;
-				ppucycles += 3;
+				cpucycles += 3;
 			}
 			else
 			{
@@ -584,7 +589,7 @@ namespace NesSharp
 				Pc = v;
 				cycles++;
 				totalcycles++;
-				ppucycles += 3;
+				cpucycles += 3;
 			}
 			else
 			{
@@ -1088,3 +1093,4 @@ namespace NesSharp
 		}
 	}
 }
+
