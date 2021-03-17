@@ -125,7 +125,7 @@ namespace NesSharp
 
 		private void UpdateScreen(RenderWindow window)
 		{
-			if (ppu.ppu_scanline == 0)
+			if (ppu.ppu_scanline == 0 && ppu.isbackgroundrendering)
 			{
 				window.Clear();
 				GuiImpl.Update(window, clock.Restart());
@@ -147,7 +147,6 @@ namespace NesSharp
 		private void RenderFrame(RenderWindow window)
 		{
 			bool wopen = true;
-
 
 			ImGuiWindowFlags wflags = ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoScrollbar |
 									  ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoCollapse;
@@ -178,10 +177,8 @@ namespace NesSharp
 		{
 			ppu = new Ppu(window);
 			cpu = new Cpu();
-			//mapper = new Mapper(true);
 			control = new Controls();
 			tracer = new Tracer();
-			//Reset();
 		}
 
 		private void Reset()
@@ -201,6 +198,9 @@ namespace NesSharp
 			{
 				case 0:
 					mapper = new Mapper000(rom);
+					break;
+				case 1:
+					mapper = new Mapper001(rom);
 					break;
 				case 2:
 					mapper = new Mapper002(rom);

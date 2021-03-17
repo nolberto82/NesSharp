@@ -34,7 +34,7 @@ namespace NesSharp
 			RType = rtype ? RamType.VRAM : RamType.RAM;
 			IsBP = true;
 			BpString = $"{offset:X4}:{BpType}:{RType}";
-			
+		
 		}
 	}
 }

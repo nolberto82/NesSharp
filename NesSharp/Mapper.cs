@@ -109,6 +109,15 @@ namespace NesSharp
 
 		public byte PpuRead(int addr)
 		{
+			if (c.cpu.breakpoints.Count > 0)
+			{
+				var res = c.cpu.breakpoints.FirstOrDefault(b => b.Offset == addr);
+				if (res != null && res.BpType == Breakpoint.Type.Read && res.RType == Breakpoint.RamType.VRAM)
+				{
+					c.cpu.Breakmode = true;
+				}
+			}
+
 			return vram[addr];
 		}
 
@@ -123,6 +132,8 @@ namespace NesSharp
 				}
 			}
 
+			vram[addr & 0x3fff] = v;
+
 			for (int i = 0; i < 6; i++)
 				Buffer.BlockCopy(vram, 0x3f00, vram, 0x3f20 + i * 32, 32);
 
@@ -136,16 +147,7 @@ namespace NesSharp
 			else if (addr == 0x3f00)
 				vram[0x3f10] = v;
 
-			vram[addr & 0x3fff] = v;
 
-			if (c.cpu.breakpoints.Count > 0)
-			{
-				var res = c.cpu.breakpoints.FirstOrDefault(b => b.Offset == addr);
-				if (res != null && res.BpType == Breakpoint.Type.Write)
-				{
-					c.cpu.Breakmode = true;
-				}
-			}
 		}
 
 		public virtual bool InitMemory(byte[] rom)
