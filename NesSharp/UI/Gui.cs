@@ -44,6 +44,13 @@ namespace NesSharp.UI
 			atlinenum = 3;
 		}
 
+		public void RenderUI(RenderWindow window, Clock clock)
+		{
+			MainMenu();
+			DebuggerView(window, clock);
+			MemoryView(window);
+		}
+
 		public void DebuggerView(RenderWindow window, Clock clock)
 		{
 			if (tracelog)

@@ -86,6 +86,7 @@ namespace NesSharp
 						//window.Clear();
 						GuiImpl.Update(window, clock.Restart());
 
+						gui.RenderUI(window, clock);
 						RenderFrame(window);
 
 						GuiImpl.Render(window);
@@ -125,7 +126,7 @@ namespace NesSharp
 
 		private void UpdateScreen(RenderWindow window)
 		{
-			if (ppu.ppu_scanline == 0 && ppu.isbackgroundrendering)
+			if (ppu.ppu_scanline == 0)
 			{
 				window.Clear();
 				GuiImpl.Update(window, clock.Restart());
@@ -137,6 +138,9 @@ namespace NesSharp
 					return;
 				}
 
+				gui.RenderUI(window, clock);
+
+				if (ppu.isbackgroundrendering)
 				RenderFrame(window);
 
 				GuiImpl.Render(window);
@@ -151,9 +155,9 @@ namespace NesSharp
 			ImGuiWindowFlags wflags = ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoScrollbar |
 									  ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoCollapse;
 
-			gui.MainMenu();
-			gui.DebuggerView(window, clock);
-			gui.MemoryView(window);
+			//gui.MainMenu();
+			//gui.DebuggerView(window, clock);
+			//gui.MemoryView(window);
 
 			ppu.emutex.Update(ppu.gfxdata);
 			ppu.emusprite.Texture = ppu.emutex;
