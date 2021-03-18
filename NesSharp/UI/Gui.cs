@@ -323,7 +323,7 @@ namespace NesSharp.UI
 		{
 			if (ImGui.BeginChild("##disasm", new ImVec2(0, -ImGui.GetTextLineHeightWithSpacing())))
 			{
-				int lines = (int)Math.Max(ImGui.GetContentRegionAvail().Y / ImGui.GetTextLineHeightWithSpacing(), 1000) - (int)ImGui.GetTextLineHeightWithSpacing();;
+				int lines = (int)Math.Max(ImGui.GetContentRegionAvail().Y / ImGui.GetTextLineHeightWithSpacing(), 1000) - (int)ImGui.GetTextLineHeightWithSpacing();
 				int Pc = (jumpto && inputtext.Length > 0 ? Convert.ToInt32(inputtext, 16) : c.cpu.Pc);// - 12;// - lines / 2;
 
 				int opsize = 0;
