@@ -10,15 +10,14 @@ namespace NesSharp.Mappers
 	{
 		private int shiftreg;
 		private int numwrites;
-		private int prgbankswitch;
 		private int banknum;
-		private int bank8000;
-		private int banka000;
-		private int bankc000;
-		private int banke000;
+		private int prgbank0;
+		private int prgbank1;
+		private int prgmode;
 
 		public Mapper001(byte[] file)
 		{
+			prgmode = 3;
 			rom = file;
 			InitMemory(rom);
 			SetupMapper();
@@ -27,7 +26,7 @@ namespace NesSharp.Mappers
 			Array.Copy(rom, 0x10 + prgsize * (prgbanks - 1), ram, 0xC000, prgsize);
 
 			if (chrsize > 0)
-				Array.Copy(rom, 0x10 + prgrom, vram, 0, chrrom);
+				Array.Copy(rom, 0x10 + prgrom, vram, 0, chrsize);
 			else
 				Array.Copy(rom, 0x10 + prgsize * prgbanks, vram, 0, chrsize);
 		}
@@ -50,8 +49,8 @@ namespace NesSharp.Mappers
 					}
 
 					numwrites++;
-					shiftreg >>= 1;
-					shiftreg |= ((banknum & 1) << 4) & 0x10;
+					;
+					shiftreg = (shiftreg >>= 1) | (v & 1) << 4;
 
 					if (numwrites == 5)
 					{
@@ -59,23 +58,6 @@ namespace NesSharp.Mappers
 						{
 							chrsize = (shiftreg & 0x10) > 0 ? 0x2000 : 0x1000;
 							//prgsize = (shiftreg & 0x08) > 0 ? 0x4000 : 0x2000;
-
-							switch (shiftreg >> 3 & 3)
-							{
-								case 0:
-								case 1:
-									prgsize = 0x8000;
-									prgbankswitch = 0x8000;
-									break;
-								case 2:
-									prgsize = 0x4000;
-									prgbankswitch = 0xc000;
-									break;
-								case 3:
-									prgsize = 0x4000;
-									prgbankswitch = 0x8000;
-									break;
-							}
 
 						}
 						else if (addr >= 0xa000 && addr <= 0xbfff)
@@ -90,13 +72,8 @@ namespace NesSharp.Mappers
 						}
 						else if (addr >= 0xe000 && addr <= 0xffff)
 						{
-							if (prgsize == 0x8000)
-								banknum /= 2;
-							Array.Copy(rom, 0x10 + prgsize * banknum, ram, 0x8000, prgsize);
-							banknum = shiftreg & 0x0f;
-							if (prgsize == 0x8000)
-								banknum = shiftreg >> 1;
-							//Array.Copy(rom, 0x10 + prgsize * banknum, ram, 0x8000, prgsize);
+							SetBankSwitchAddresses();
+							
 						}
 						shiftreg = 0x10;
 						numwrites = 0;
@@ -117,6 +94,25 @@ namespace NesSharp.Mappers
 		public override void PpuWrite(int addr, byte v)
 		{
 			base.PpuWrite(addr, v);
+		}
+
+		private void SetBankSwitchAddresses()
+        {
+			switch (prgmode)
+			{
+				case 0:
+				case 1:
+					//prgbank0 = 0x8000;
+					//prgbankswitch = 0x8000;
+					break;
+				case 2:
+					//prgsize = 0x4000;
+					//prgbankswitch = 0xc000;
+					break;
+				case 3:
+					Array.Copy(rom, 0x10 + prgsize * shiftreg, ram, 0x8000, prgsize);
+					break;
+			}
 		}
 	}
 }

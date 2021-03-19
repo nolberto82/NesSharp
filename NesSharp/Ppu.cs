@@ -714,17 +714,21 @@
 				att = c.mapper.oam[i * 4 + 2];
 				x = c.mapper.oam[i * 4 + 3];// & 0xff + left8;
 
-				int sz = 8;
+				int size = 8;
 				if (spritesize)
-					sz = 16;
+                {
+					patternaddr = (tileid & 1) == 1 ? 0x1000 : 0x000;
+					size = 16;
+                }
+
 
 				bool flipH = (att & 0x40) > 0;
 				bool flipV = (att & 0x80) > 0;
 
 				for (int r = 0; r < 8; r++)
 				{
-					u8 byte1 = c.mapper.vram[patternaddr + tileid * 16 + r + 0];
-					u8 byte2 = c.mapper.vram[patternaddr + tileid * 16 + r + 8];
+					u8 byte1 = c.mapper.vram[patternaddr + tileid * (size * 2) + r + 0];
+					u8 byte2 = c.mapper.vram[patternaddr + tileid * (size * 2) + r + size];
 
 					//u8 byte1 = c.mapper.PpuRead(patternaddr + tileid * 16 + r + 0);
 					//u8 byte2 = c.mapper.PpuRead(patternaddr + tileid * 16 + r + 8);
@@ -766,7 +770,7 @@
 						if (palindex != 0)
 						{
 							byte bgpalindex = sp0data[256 * (y + row) * 4 + (x + col) * 4 + 0];
-							if (bgpalindex != 0 && i == 0 && yp == ppu_scanline && x < 255)
+							if (bgpalindex != 0 && i == 0 && yp == ppu_scanline & x < 255)
 								SetSpriteZero();
 
 							if ((att & frontback) == 0 || bgpalindex == 0)
