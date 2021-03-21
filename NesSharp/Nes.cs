@@ -17,199 +17,199 @@ using NesSharp.Mappers;
 
 namespace NesSharp
 {
-	public class Nes
-	{
-		public Mapper mapper;
-		public Cpu cpu;
-		public Ppu ppu;
-		public Controls control;
-		public Tracer tracer;
-		public Gui gui;
-		public Clock clock = new Clock();
+    public class Nes
+    {
+        public Mapper mapper;
+        public Cpu cpu;
+        public Ppu ppu;
+        public Controls control;
+        public Tracer tracer;
+        public Gui gui;
+        public Clock clock = new Clock();
 
-		public int emustate;
+        public int emustate;
 
-		private static readonly Lazy<Nes> lazy = new Lazy<Nes>(() => new Nes());
-		private Nes() { }
+        private static readonly Lazy<Nes> lazy = new Lazy<Nes>(() => new Nes());
+        private Nes() { }
 
-		public static Nes Instance
-		{
-			get
-			{
-				return lazy.Value;
-			}
-		}
+        public static Nes Instance
+        {
+            get
+            {
+                return lazy.Value;
+            }
+        }
 
-		public void Run()
-		{
-			var window = new RenderWindow(new SFML.Window.VideoMode(256, 240), "Nes Sharp");
-			GuiImpl.Init(window);
-			window.Closed += (s, e) => window.Close();
-			window.Size = new Vector2u(window.Size.X * 6 - 120, window.Size.Y * 4);
-			window.Position = new Vector2i(20, 20);
+        public void Run()
+        {
+            var window = new RenderWindow(new SFML.Window.VideoMode(256, 240), "Nes Sharp");
+            GuiImpl.Init(window);
+            window.Closed += (s, e) => window.Close();
+            window.Size = new Vector2u(window.Size.X * 6 - 120, window.Size.Y * 4);
+            window.Position = new Vector2i(20, 20);
 
-			window.SetFramerateLimit(60);
+            window.SetFramerateLimit(60);
 
-			emustate = State.Reset;
+            emustate = State.Reset;
 
-			gui = new Gui();
+            gui = new Gui();
 
-			Initialize(window);
+            Initialize(window);
 
-			gui.filemanager = true;
+            gui.filemanager = true;
 
-			SetAppStyle();
+            SetAppStyle();
 
-			while (window.IsOpen)
-			{
-				window.DispatchEvents();
+            while (window.IsOpen)
+            {
+                window.DispatchEvents();
 
-				if (!window.IsOpen)
-					break;
+                if (!window.IsOpen)
+                    break;
 
-				switch (emustate)
-				{
-					case State.Running:
-						cpu.Step();
-						if (!cpu.Breakmode)
-							ppu.RenderScanline();
+                switch (emustate)
+                {
+                    case State.Running:
+                        cpu.Step();
+                        if (!cpu.Breakmode)
+                            ppu.RenderScanline();
 
-						if (cpu.Breakmode)
-							emustate = State.Debug;
+                        if (cpu.Breakmode)
+                            emustate = State.Debug;
 
-						UpdateScreen(window);
-						break;
-					case State.Reset:
-						UpdateReset(window);
-						break;
-					case State.Debug:
-						//window.Clear();
-						GuiImpl.Update(window, clock.Restart());
+                        UpdateScreen(window);
+                        break;
+                    case State.Reset:
+                        UpdateReset(window);
+                        break;
+                    case State.Debug:
+                        //window.Clear();
+                        GuiImpl.Update(window, clock.Restart());
 
-						gui.RenderUI(window, clock);
-						RenderFrame(window);
+                        gui.RenderUI(window, clock);
+                        RenderFrame(window);
 
-						GuiImpl.Render(window);
-						window.Display();
-						break;
-				}
-			}
+                        GuiImpl.Render(window);
+                        window.Display();
+                        break;
+                }
+            }
 
-			if (cpu != null && mapper != null && mapper.ram != null)
-			{
-				File.WriteAllBytes("ram.bin", mapper.ram);
-				File.WriteAllBytes("vram.bin", mapper.vram);
-			}
+            if (cpu != null && mapper != null && mapper.ram != null)
+            {
+                File.WriteAllBytes("ram.bin", mapper.ram);
+                File.WriteAllBytes("vram.bin", mapper.vram);
+            }
 
-			GuiImpl.Shutdown();
-		}
+            GuiImpl.Shutdown();
+        }
 
-		private void UpdateReset(RenderWindow window)
-		{
-			GuiImpl.Update(window, clock.Restart());
+        private void UpdateReset(RenderWindow window)
+        {
+            GuiImpl.Update(window, clock.Restart());
 
-			if (gui.resetemu)
-			{
-				Reset();
-				emustate = State.Running;
-				return;
-			}
+            if (gui.resetemu)
+            {
+                Reset();
+                emustate = State.Running;
+                return;
+            }
 
-			gui.MainMenu();
-			gui.LoadFile(window, clock);
-			if (emustate == State.Running)
-				Reset();
+            gui.MainMenu();
+            gui.LoadFile(window, clock);
+            if (emustate == State.Running)
+                Reset();
 
-			GuiImpl.Render(window);
-			window.Display();
-		}
+            GuiImpl.Render(window);
+            window.Display();
+        }
 
-		private void UpdateScreen(RenderWindow window)
-		{
-			if (ppu.ppu_scanline == 0)
-			{
-				window.Clear();
-				GuiImpl.Update(window, clock.Restart());
+        private void UpdateScreen(RenderWindow window)
+        {
+            if (ppu.ppu_scanline == 0 && ppu.isbackgroundrendering)
+            {
+                window.Clear();
+                GuiImpl.Update(window, clock.Restart());
 
-				if (gui.filemanager)
-				{
-					gui.LoadFile(window, clock);
-					Reset();
-					return;
-				}
+                if (gui.filemanager)
+                {
+                    gui.LoadFile(window, clock);
+                    Reset();
+                    return;
+                }
 
-				gui.RenderUI(window, clock);
+                gui.RenderUI(window, clock);
 
-				if (ppu.isbackgroundrendering)
-				RenderFrame(window);
+                if (ppu.isbackgroundrendering)
+                    RenderFrame(window);
 
-				GuiImpl.Render(window);
-				window.Display();
-			}
-		}
+                GuiImpl.Render(window);
+                window.Display();
+            }
+        }
 
-		private void RenderFrame(RenderWindow window)
-		{
-			bool wopen = true;
+        private void RenderFrame(RenderWindow window)
+        {
+            bool wopen = true;
 
-			ImGuiWindowFlags wflags = ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoScrollbar |
-									  ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoCollapse;
+            ImGuiWindowFlags wflags = ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoScrollbar |
+                                      ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoCollapse;
 
-			//gui.MainMenu();
-			//gui.DebuggerView(window, clock);
-			//gui.MemoryView(window);
+            //gui.MainMenu();
+            //gui.DebuggerView(window, clock);
+            //gui.MemoryView(window);
 
-			ppu.emutex.Update(ppu.gfxdata);
-			ppu.emusprite.Texture = ppu.emutex;
+            ppu.emutex.Update(ppu.gfxdata);
+            ppu.emusprite.Texture = ppu.emutex;
 
-			uint id = ppu.emusprite.Texture.NativeHandle;
+            uint id = ppu.emusprite.Texture.NativeHandle;
 
-			if (ImGui.Begin("Nes Sharp", ref wopen, wflags))
-			{
-				ImGui.SetWindowPos(new ImVec2(0, 25));
-				ImGui.SetWindowSize(new ImVec2(512, 480));
-				ImGui.Image((IntPtr)id, new ImVec2(512, 464));
-			}
-		}
+            if (ImGui.Begin("Nes Sharp", ref wopen, wflags))
+            {
+                ImGui.SetWindowPos(new ImVec2(0, 25));
+                ImGui.SetWindowSize(new ImVec2(512, 480));
+                ImGui.Image((IntPtr)id, new ImVec2(512, 464));
+            }
+        }
 
-		private void SetAppStyle()
-		{
-			//ImGui.StyleColorsLight();
-		}
+        private void SetAppStyle()
+        {
+            //ImGui.StyleColorsLight();
+        }
 
-		private void Initialize(RenderWindow window)
-		{
-			ppu = new Ppu(window);
-			cpu = new Cpu();
-			control = new Controls();
-			tracer = new Tracer();
-		}
+        private void Initialize(RenderWindow window)
+        {
+            ppu = new Ppu(window);
+            cpu = new Cpu();
+            control = new Controls();
+            tracer = new Tracer();
+        }
 
-		private void Reset()
-		{
-			//mapper.LoadRom();
-			SetupMapper();
-			cpu.Reset();
-			ppu.Reset();
-			gui.Reset();
-			gui.resetemu = false;
-		}
+        private void Reset()
+        {
+            //mapper.LoadRom();
+            SetupMapper();
+            cpu.Reset();
+            ppu.Reset();
+            gui.Reset();
+            gui.resetemu = false;
+        }
 
-		private void SetupMapper()
-		{
-			byte[] rom = File.ReadAllBytes(gui.gamename);
-			switch ((rom[6] & 0xf0) >> 4)
-			{
-				case 0:
-					mapper = new Mapper000(rom);
-					break;
-				case 1:
-					mapper = new Mapper001(rom);
-					break;
-				case 2:
-					mapper = new Mapper002(rom);
-					break;
-			}
-		}
-	}
+        private void SetupMapper()
+        {
+            byte[] rom = File.ReadAllBytes(gui.gamename);
+            switch ((rom[6] & 0xf0) >> 4)
+            {
+                case 0:
+                    mapper = new Mapper000(rom);
+                    break;
+                case 1:
+                    mapper = new Mapper001(rom);
+                    break;
+                case 2:
+                    mapper = new Mapper002(rom);
+                    break;
+            }
+        }
+    }
 }
